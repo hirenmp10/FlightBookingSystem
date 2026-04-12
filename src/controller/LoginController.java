@@ -16,7 +16,8 @@ import javafx.stage.Stage;
 import javafx.scene.Node;
 import java.io.IOException;
 import javafx.event.ActionEvent;
-import utils.DashboardFactory;
+import utils.ViewFactory;
+import utils.View;
 
 
 import utils.BookingContext;
@@ -47,10 +48,17 @@ private void handleLogin(ActionEvent event) {
         // Set the logged-in user's ID in BookingContext
         BookingContext.setLoggedInUserId(user.getId());
 
-        // Use the DashboardFactory to redirect based on user role
+        // Use the ViewFactory to redirect based on user role
         try {
-            DashboardFactory.redirectToDashboard(user.getRole(), event);
-        } catch (IllegalArgumentException e) {
+            View view = ViewFactory.getView(user.getRole());
+            Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+            stage.setScene(view.getScene());
+            stage.setTitle(view.getTitle());
+            stage.setMaximized(true);
+            stage.setFullScreenExitHint("");
+            stage.setFullScreen(true);
+            stage.show();
+        } catch (Exception e) {
             showAlert(Alert.AlertType.ERROR, "Login Failed", e.getMessage());
         }
     } else {

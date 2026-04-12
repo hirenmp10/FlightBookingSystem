@@ -95,14 +95,14 @@
                             <ComboBox fx:id="seatsDropdown" onAction="#handleSeatSelection" style="-fx-background-radius: 8; -fx-border-radius: 8;" GridPane.rowIndex="0" GridPane.columnIndex="1" />
                             
                             <Label text="Passenger Details:" style="-fx-font-size: 16px; -fx-text-fill: #2c3e50;" GridPane.rowIndex="1" GridPane.columnIndex="0" GridPane.valignment="TOP" />
-                            <ScrollPane style="-fx-background: transparent; -fx-background-color: transparent;" fitToWidth="true" prefHeight="300" GridPane.rowIndex="1" GridPane.columnIndex="1">
-                                <VBox fx:id="passengerDetailsContainer" spacing="15" style="-fx-background-color: #f8f9fa; -fx-background-radius: 8;">
-                                    <padding>
-                                        <Insets top="15" right="15" bottom="15" left="15"/>
-                                    </padding>
-                                </VBox>
-                            </ScrollPane>
+                            <VBox fx:id="passengerDetailsContainer" spacing="20"
+                                  style="-fx-background-color: #f8f9fa; -fx-background-radius: 8; -fx-padding: 15;"
+                                  GridPane.rowIndex="1" GridPane.columnIndex="1">
+                                <Label text="Select number of seats above to fill passenger details."
+                                       style="-fx-text-fill: #888; -fx-font-size: 13px; -fx-font-style: italic;" />
+                            </VBox>
                         </GridPane>
+
                     </VBox>
                     
                     <!-- Seat Selection Section -->

@@ -43,7 +43,7 @@ public class BookingDAO {
     }
 
     public static int getTotalSeats(String flightNumber) {
-        String sql = "SELECT total_seats FROM flights WHERE flight_number = ?";
+        String sql = "SELECT total_seats FROM flights WHERE flightNumber = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 

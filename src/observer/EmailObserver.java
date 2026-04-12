@@ -100,8 +100,8 @@ public class EmailObserver implements Observer {
         
         try {
             connection = DBConnection.getConnection();
-            String query = "SELECT flight_number, origin, destination, departure_time, total_seats, available_seats, cost, approved " +
-                           "FROM flights WHERE flight_number = ?";
+            String query = "SELECT flightNumber, origin, destination, departure_time, total_seats, available_seats, cost, approved " +
+                           "FROM flights WHERE flightNumber = ?";
             statement = connection.prepareStatement(query);
             statement.setString(1, flightNumber);
             
@@ -109,7 +109,7 @@ public class EmailObserver implements Observer {
             
             if (resultSet.next()) {
                 flight = new Flight(
-                    resultSet.getString("flight_number"),
+                    resultSet.getString("flightNumber"),
                     resultSet.getString("origin"),
                     resultSet.getString("destination"),
                     resultSet.getTimestamp("departure_time").toLocalDateTime(),

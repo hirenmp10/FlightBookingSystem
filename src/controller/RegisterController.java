@@ -33,7 +33,7 @@ public class RegisterController {
             return;
         }
 
-        User user = new User(username, password, role);
+        User user = utils.UserFactory.createUser(username, password, role);
         boolean success = UserDAO.addUser(user);
 
         if (success) {

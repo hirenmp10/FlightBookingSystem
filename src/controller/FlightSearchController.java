@@ -4,6 +4,7 @@ import javafx.fxml.FXML;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ListView;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.DatePicker;
 import javafx.collections.FXCollections;
 import model.Flight;
@@ -16,21 +17,28 @@ import java.time.LocalDate;
 import java.util.List;
 
 public class FlightSearchController {
-    @FXML private TextField sourceField;
-    @FXML private TextField destinationField;
+    @FXML private ComboBox<String> sourceComboBox;
+    @FXML private ComboBox<String> destinationComboBox;
     @FXML private DatePicker datePicker;
     @FXML private ListView<String> flightsList;
 
     private List<Flight> foundFlights;
 
     @FXML
+    public void initialize() {
+        List<String> cities = FlightDAO.getAllCities();
+        sourceComboBox.setItems(FXCollections.observableArrayList(cities));
+        destinationComboBox.setItems(FXCollections.observableArrayList(cities));
+    }
+
+    @FXML
     private void handleSearch() {
-        String source = sourceField.getText();
-        String dest = destinationField.getText();
+        String source = sourceComboBox.getValue();
+        String dest = destinationComboBox.getValue();
         LocalDate date = datePicker.getValue();
 
-        if (source.isEmpty() || dest.isEmpty() || date == null) {
-            showAlert("Please fill in all fields.");
+        if (source == null || dest == null || date == null) {
+            showAlert("Please select all fields.");
             return;
         }
 

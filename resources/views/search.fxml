@@ -24,11 +24,11 @@
                style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;" />
 
         <!-- Source Field -->
-        <TextField fx:id="sourceField" promptText="Source" prefWidth="250"
+        <ComboBox fx:id="sourceComboBox" promptText="Origin" prefWidth="250"
                    style="-fx-background-color: #f4f4f4; -fx-border-radius: 8; -fx-padding: 8; -fx-font-size: 14px; -fx-border-color: #ddd; -fx-border-width: 1;" />
 
         <!-- Destination Field -->
-        <TextField fx:id="destinationField" promptText="Destination" prefWidth="250"
+        <ComboBox fx:id="destinationComboBox" promptText="Destination" prefWidth="250"
                    style="-fx-background-color: #f4f4f4; -fx-border-radius: 8; -fx-padding: 8; -fx-font-size: 14px; -fx-border-color: #ddd; -fx-border-width: 1;" />
 
         <!-- Date Picker -->

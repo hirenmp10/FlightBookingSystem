@@ -11,7 +11,7 @@ public class FlightDAO {
 
     // Add a flight with approved = false (pending approval)
     public static boolean addFlight(Flight flight) {
-        String sql = "INSERT INTO flights (flight_number, origin, destination, departure_time, total_seats, available_seats, cost, approved) VALUES (?, ?, ?, ?, ?, ?, ?, false)";
+        String sql = "INSERT INTO flights (flightNumber, origin, destination, departure_time, total_seats, available_seats, cost, approved) VALUES (?, ?, ?, ?, ?, ?, ?, false)";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -34,7 +34,7 @@ public class FlightDAO {
 
     // Approve a flight (set approved = true)
     public static boolean approveFlight(String flightNumber) {
-        String sql = "UPDATE flights SET approved = true WHERE flight_number = ?";
+        String sql = "UPDATE flights SET approved = true WHERE flightNumber = ?";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -50,7 +50,7 @@ public class FlightDAO {
 
     // Delete a flight if not approved by manager
     public static boolean deleteFlight(String flightNumber) {
-        String sql = "DELETE FROM flights WHERE flight_number = ?";
+        String sql = "DELETE FROM flights WHERE flightNumber = ?";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -75,7 +75,7 @@ public class FlightDAO {
 
             while (rs.next()) {
                 flights.add(new Flight(
-                    rs.getString("flight_number"),
+                    rs.getString("flightNumber"),
                     rs.getString("origin"),
                     rs.getString("destination"),
                     rs.getTimestamp("departure_time").toLocalDateTime(),
@@ -103,7 +103,7 @@ public class FlightDAO {
 
             while (rs.next()) {
                 flights.add(new Flight(
-                    rs.getString("flight_number"),
+                    rs.getString("flightNumber"),
                     rs.getString("origin"),
                     rs.getString("destination"),
                     rs.getTimestamp("departure_time").toLocalDateTime(),
@@ -131,7 +131,7 @@ public class FlightDAO {
 
             while (rs.next()) {
                 flights.add(new Flight(
-                    rs.getString("flight_number"),
+                    rs.getString("flightNumber"),
                     rs.getString("origin"),
                     rs.getString("destination"),
                     rs.getTimestamp("departure_time").toLocalDateTime(),
@@ -150,7 +150,7 @@ public class FlightDAO {
 
     // Disapprove a flight
     public static boolean disapproveFlight(String flightNumber) {
-        String sql = "DELETE FROM flights WHERE flight_number = ? AND approved = false"; // only allow disapproving unapproved flights
+        String sql = "DELETE FROM flights WHERE flightNumber = ? AND approved = false"; // only allow disapproving unapproved flights
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -162,6 +162,22 @@ public class FlightDAO {
             e.printStackTrace();
             return false;
         }
+    }
+
+    // Get all unique cities
+    public static List<String> getAllCities() {
+        List<String> cities = new ArrayList<>();
+        String sql = "SELECT DISTINCT origin AS city FROM flights UNION SELECT DISTINCT destination AS city FROM flights";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                cities.add(rs.getString("city"));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return cities;
     }
 
     // Search flights based on source, destination, and date (only approved flights)
@@ -179,7 +195,7 @@ public class FlightDAO {
             ResultSet rs = stmt.executeQuery();
             while (rs.next()) {
                 flights.add(new Flight(
-                    rs.getString("flight_number"),
+                    rs.getString("flightNumber"),
                     rs.getString("origin"),
                     rs.getString("destination"),
                     rs.getTimestamp("departure_time").toLocalDateTime(),

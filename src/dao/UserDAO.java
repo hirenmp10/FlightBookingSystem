@@ -36,7 +36,7 @@ public class UserDAO {
         if (rs.next()) {
             int userId = rs.getInt("id");
             System.out.println("Retrieved User ID: " + userId); // Debug
-            return new User(
+            return utils.UserFactory.createUser(
                 userId,
                 rs.getString("username"),
                 rs.getString("password"),
@@ -61,7 +61,7 @@ public class UserDAO {
             ResultSet rs = stmt.executeQuery(sql);
 
             while (rs.next()) {
-                users.add(new User(
+                users.add(utils.UserFactory.createUser(
                     rs.getInt("id"),
                     rs.getString("username"),
                     rs.getString("password"),

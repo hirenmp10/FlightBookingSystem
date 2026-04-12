@@ -268,7 +268,7 @@ private void handleViewProfile(ActionEvent event) {
             rs = stmt.executeQuery();
             
             if (rs.next()) {
-                user = new User(
+                user = utils.UserFactory.createUser(
                     rs.getInt("id"),
                     rs.getString("username"),
                     rs.getString("password"),

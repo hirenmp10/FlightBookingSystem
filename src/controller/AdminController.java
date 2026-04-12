@@ -80,12 +80,12 @@ public class AdminController implements Initializable {
 
     @FXML
     private void addFlight() {
-        String flightNumber = flightNumberField.getText();
-        String origin = originField.getText();
-        String destination = destinationField.getText();
-        String departure = departureField.getText();
-        String seatsText = seatsField.getText();
-        String costText = costField.getText();
+        String flightNumber = flightNumberField.getText().trim();
+        String origin = originField.getText().trim();
+        String destination = destinationField.getText().trim();
+        String departure = departureField.getText().trim();
+        String seatsText = seatsField.getText().trim();
+        String costText = costField.getText().trim();
 
         if (flightNumber.isEmpty() || origin.isEmpty() || destination.isEmpty() || departure.isEmpty() || seatsText.isEmpty() || costText.isEmpty()) {
             showAlert(Alert.AlertType.ERROR, "Validation Error", "All fields must be filled!");

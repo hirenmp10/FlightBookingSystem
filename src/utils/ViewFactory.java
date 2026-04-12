@@ -8,6 +8,8 @@ public class ViewFactory {
                 return new AdminDashboardView();
             case "customer":
                 return new CustomerDashboardView();
+            case "manager":
+                return new ManagerDashboardView();
             case "login":
                 return new LoginView();
             default:

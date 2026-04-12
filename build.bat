@@ -8,7 +8,7 @@ echo ===================
 echo Compiling Java Code
 echo ===================
 javac ^
-  --module-path "C:\Users\mouli\OneDrive\Documents\OOAD_Project\javafx-sdk-21.0.6\lib" ^
+  --module-path "c:\Hiren_M_P_PES2UG23CS224\SEM-6\OOAD\OOAD_Project\javafx-sdk-21.0.6\lib" ^
   --add-modules javafx.controls,javafx.fxml ^
   -cp "lib\mysql-connector-j-9.2.0.jar;lib\javax.mail.jar;lib\activation.jar" ^
   -d out ^
@@ -26,7 +26,7 @@ echo ======================
 echo Running JavaFX Program
 echo ======================
 java ^
-  --module-path "C:\Users\mouli\OneDrive\Documents\OOAD_Project\javafx-sdk-21.0.6\lib" ^
+  --module-path "c:\Hiren_M_P_PES2UG23CS224\SEM-6\OOAD\OOAD_Project\javafx-sdk-21.0.6\lib" ^
   --add-modules javafx.controls,javafx.fxml ^
   -cp "out;lib/mysql-connector-j-9.2.0.jar;lib/javax.mail.jar;lib/activation.jar" ^
   MainApp

@@ -5,7 +5,7 @@ import java.sql.*;
 public class DBConnection {
     private static final String URL = "jdbc:mysql://localhost:3306/flight_booking_system";
     private static final String USER = "root";
-    private static final String PASS = "Password";
+    private static final String PASS = "hiren100605";
 
     private static Connection connection;
 

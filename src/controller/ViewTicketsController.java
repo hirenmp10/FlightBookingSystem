@@ -70,7 +70,7 @@ public class ViewTicketsController {
                 ps = con.prepareStatement(
                     "SELECT b.*, f.cost, f.departure_time, f.origin, f.destination " +
                     "FROM bookings b " +
-                    "LEFT JOIN flights f ON b.flight_number = f.flight_number " +
+                    "LEFT JOIN flights f ON b.flight_number = f.flightNumber " +
                     "WHERE b.user_id = ?");
                 ps.setInt(1, userId);
             } else {
@@ -90,7 +90,7 @@ public class ViewTicketsController {
                 ps = con.prepareStatement(
                     "SELECT b.*, f.cost, f.departure_time, f.origin, f.destination " +
                     "FROM bookings b " +
-                    "LEFT JOIN flights f ON b.flight_number = f.flight_number " +
+                    "LEFT JOIN flights f ON b.flight_number = f.flightNumber " +
                     "WHERE b.id = ?");
                 ps.setInt(1, Integer.parseInt(bookingIdField.getText()));
             }
@@ -242,8 +242,8 @@ public class ViewTicketsController {
         // Verify the booking exists and get flight information
         try (Connection con = DBConnection.getConnection()) {
             PreparedStatement checkPs = con.prepareStatement(
-                "SELECT b.id, f.flight_number FROM bookings b " +
-                "JOIN flights f ON b.flight_number = f.flight_number " +
+                "SELECT b.id, f.flightNumber FROM bookings b " +
+                "JOIN flights f ON b.flight_number = f.flightNumber " +
                 "WHERE b.id = ?");
             checkPs.setInt(1, bookingId);
             
@@ -254,7 +254,7 @@ public class ViewTicketsController {
                 return;
             }
             
-            String flightNumber = rs.getString("flight_number");
+            String flightNumber = rs.getString("flightNumber");
             
             // Show confirmation dialog
             Alert confirm = new Alert(Alert.AlertType.CONFIRMATION, 
@@ -282,7 +282,7 @@ public class ViewTicketsController {
                             // Update available seats
                             PreparedStatement updateSeatsPs = conn.prepareStatement(
                                 "UPDATE flights SET available_seats = available_seats + ? " +
-                                "WHERE flight_number = ?");
+                                "WHERE flightNumber = ?");
                             updateSeatsPs.setInt(1, seatCount);
                             updateSeatsPs.setString(2, flightNumber);
                             updateSeatsPs.executeUpdate();

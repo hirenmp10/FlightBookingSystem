@@ -104,21 +104,67 @@ public class BookingController {
     }
 
     private void updatePassengerDetailsForm() {
-        for (int i = 0; i < seatsToSelect - 1; i++) {
-            VBox passengerForm = new VBox(10);
-            TextField passengerName = new TextField();
-            passengerName.setPromptText("Enter passenger " + (i + 2) + " name");
-            TextField passengerDob = new TextField();
-            passengerDob.setPromptText("Enter passenger " + (i + 2) + " date of birth (YYYY-MM-DD)");
+        passengerDetailsContainer.getChildren().clear();
 
-            passengerForm.getChildren().addAll(
-                new Label("Passenger " + (i + 2) + " Name:"), passengerName,
-                new Label("Passenger " + (i + 2) + " Date of Birth:"), passengerDob
+        if (seatsToSelect <= 1) {
+            // If only 1 seat, show a friendly placeholder
+            javafx.scene.control.Label hint = new javafx.scene.control.Label("Only 1 seat selected — no extra passenger details needed.");
+            hint.setStyle("-fx-text-fill: #888; -fx-font-size: 13px; -fx-font-style: italic;");
+            passengerDetailsContainer.getChildren().add(hint);
+            return;
+        }
+
+        for (int i = 0; i < seatsToSelect - 1; i++) {
+            // === Passenger Card Container ===
+            VBox card = new VBox(10);
+            card.setStyle(
+                "-fx-background-color: white;" +
+                "-fx-background-radius: 10;" +
+                "-fx-border-color: #d0e4ff;" +
+                "-fx-border-width: 1.5;" +
+                "-fx-border-radius: 10;" +
+                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.07), 6, 0, 0, 2);"
+            );
+            card.setPadding(new javafx.geometry.Insets(15, 20, 15, 20));
+
+            // Card header label
+            javafx.scene.control.Label header = new javafx.scene.control.Label("🧳 Passenger " + (i + 2) + " Details");
+            header.setStyle("-fx-font-size: 15px; -fx-font-weight: bold; -fx-text-fill: #4C8BF5;");
+
+            // Separator
+            javafx.scene.control.Separator sep = new javafx.scene.control.Separator();
+
+            // Name Row
+            javafx.scene.control.Label nameLabel = new javafx.scene.control.Label("Full Name:");
+            nameLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #444; -fx-font-weight: bold;");
+            TextField passengerName = new TextField();
+            passengerName.setPromptText("Enter full name of Passenger " + (i + 2));
+            passengerName.setStyle(
+                "-fx-background-radius: 8;" +
+                "-fx-border-color: #ccc;" +
+                "-fx-border-radius: 8;" +
+                "-fx-font-size: 13px;" +
+                "-fx-pref-height: 35px;"
             );
 
-            passengerDetailsContainer.getChildren().add(passengerForm);
+            // Date of Birth Row
+            javafx.scene.control.Label dobLabel = new javafx.scene.control.Label("Date of Birth (YYYY-MM-DD):");
+            dobLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #444; -fx-font-weight: bold;");
+            TextField passengerDob = new TextField();
+            passengerDob.setPromptText("e.g. 1995-06-15");
+            passengerDob.setStyle(
+                "-fx-background-radius: 8;" +
+                "-fx-border-color: #ccc;" +
+                "-fx-border-radius: 8;" +
+                "-fx-font-size: 13px;" +
+                "-fx-pref-height: 35px;"
+            );
+
+            card.getChildren().addAll(header, sep, nameLabel, passengerName, dobLabel, passengerDob);
+            passengerDetailsContainer.getChildren().add(card);
         }
     }
+
 
     private void handleSeatSelectionAction(Button seatButton, int seatNum) {
         if (seatButton.getStyle().contains("red")) {
@@ -186,9 +232,10 @@ private void confirmBooking(ActionEvent event) {
 
         // Add passengers' details
         for (int i = 0; i < numSeats - 1; i++) {
-            VBox passengerForm = (VBox) passengerDetailsContainer.getChildren().get(i);
-            String passengerName = ((TextField) passengerForm.getChildren().get(1)).getText();
-            String passengerDob = ((TextField) passengerForm.getChildren().get(3)).getText();
+            VBox passengerCard = (VBox) passengerDetailsContainer.getChildren().get(i);
+            // Card structure: [0]=header, [1]=separator, [2]=nameLabel, [3]=nameField, [4]=dobLabel, [5]=dobField
+            String passengerName = ((TextField) passengerCard.getChildren().get(3)).getText();
+            String passengerDob  = ((TextField) passengerCard.getChildren().get(5)).getText();
 
             if (passengerName.isEmpty() || passengerDob.isEmpty()) {
                 throw new IllegalArgumentException("Please fill in all fields for passenger " + (i + 2));
@@ -229,12 +276,111 @@ private void confirmBooking(ActionEvent event) {
 
     @FXML
     private void handlePayment(ActionEvent event) {
-        payButton.setText("Paid");
-        payButton.setStyle("-fx-background-color: green;");
-        paymentLabel.setText("Payment Successful!");
+        // ── Step 1: Validate primary passenger fields ──────────────────────
+        String name    = nameField.getText().trim();
+        String dob     = dobField.getText().trim();
+        String phone   = phoneField.getText().trim();
+        String email   = emailField.getText().trim();
+        String address = addressField.getText().trim();
 
-        // Enable the confirm button after payment
-        confirmButton.setDisable(false);
+        if (name.isEmpty() || dob.isEmpty() || phone.isEmpty() || email.isEmpty() || address.isEmpty()) {
+            showAlert("Missing Details", "Please fill in all Personal Information fields before proceeding to payment.");
+            return;
+        }
+
+        // ── Step 2: Validate seat selection ───────────────────────────────
+        String seatNumbers = seatNumbersField.getText().trim();
+        if (seatNumbers.isEmpty()) {
+            showAlert("No Seats Selected", "Please select your seats from the seat map before proceeding to payment.");
+            return;
+        }
+
+        // Make sure correct number of seats is selected
+        if (seatsToSelect > 0 && selectedSeats.size() != seatsToSelect) {
+            showAlert("Seat Mismatch", "You selected " + seatsToSelect + " seat(s) but only picked " + selectedSeats.size() + " on the map. Please complete seat selection.");
+            return;
+        }
+
+        // ── Step 3: Validate extra passenger forms ────────────────────────
+        if (seatsToSelect > 1) {
+            for (int i = 0; i < seatsToSelect - 1; i++) {
+                if (i >= passengerDetailsContainer.getChildren().size()) break;
+                VBox card = (VBox) passengerDetailsContainer.getChildren().get(i);
+                String pName = ((TextField) card.getChildren().get(3)).getText().trim();
+                String pDob  = ((TextField) card.getChildren().get(5)).getText().trim();
+                if (pName.isEmpty() || pDob.isEmpty()) {
+                    showAlert("Missing Passenger Details", "Please fill in Name and Date of Birth for Passenger " + (i + 2) + ".");
+                    return;
+                }
+            }
+        }
+
+        // ── Step 4: Fetch flight cost from DB ─────────────────────────────
+        double costPerSeat = 0;
+        String origin = "", destination = "", departureTime = "";
+        try (java.sql.Connection conn = db.DBConnection.getConnection()) {
+            java.sql.PreparedStatement ps = conn.prepareStatement(
+                "SELECT cost, origin, destination, departure_time FROM flights WHERE flightNumber = ?");
+            ps.setString(1, flightNumber);
+            java.sql.ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                costPerSeat    = rs.getDouble("cost");
+                origin         = rs.getString("origin");
+                destination    = rs.getString("destination");
+                departureTime  = rs.getString("departure_time");
+            }
+        } catch (Exception e) {
+            showAlert("Error", "Could not fetch flight details: " + e.getMessage());
+            return;
+        }
+
+        double totalCost = costPerSeat * seatsToSelect;
+
+        // ── Step 5: Show Payment Summary Dialog ───────────────────────────
+        Alert summary = new Alert(Alert.AlertType.CONFIRMATION);
+        summary.setTitle("Payment Summary");
+        summary.setHeaderText("✈ Review & Confirm Payment");
+
+        String summaryText =
+            "─────────────────────────────────\n" +
+            "  FLIGHT DETAILS\n" +
+            "─────────────────────────────────\n" +
+            "  Flight No    : " + flightNumber + "\n" +
+            "  Route        : " + origin + " → " + destination + "\n" +
+            "  Departure    : " + departureTime + "\n\n" +
+            "─────────────────────────────────\n" +
+            "  BOOKING DETAILS\n" +
+            "─────────────────────────────────\n" +
+            "  Passenger    : " + name + "\n" +
+            "  Seats        : " + seatNumbers + "\n" +
+            "  No. of Seats : " + seatsToSelect + "\n\n" +
+            "─────────────────────────────────\n" +
+            "  PAYMENT DETAILS\n" +
+            "─────────────────────────────────\n" +
+            "  Cost per Seat: ₹" + String.format("%.2f", costPerSeat) + "\n" +
+            "  No. of Seats : " + seatsToSelect + "\n" +
+            "  ────────────────────────────\n" +
+            "  TOTAL AMOUNT : ₹" + String.format("%.2f", totalCost) + "\n" +
+            "─────────────────────────────────\n\n" +
+            "Click OK to confirm payment.";
+
+        summary.setContentText(summaryText);
+        summary.getButtonTypes().setAll(ButtonType.OK, ButtonType.CANCEL);
+
+        // Style the dialog for readability
+        summary.getDialogPane().setStyle("-fx-font-family: monospace; -fx-font-size: 13px;");
+
+        summary.showAndWait().ifPresent(btn -> {
+            if (btn == ButtonType.OK) {
+                // Mark payment as done
+                payButton.setText("✔ Paid");
+                payButton.setStyle("-fx-background-color: #28a745; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 8;");
+                payButton.setDisable(true);
+                paymentLabel.setText("✔ Payment of ₹" + String.format("%.2f", totalCost) + " Successful!");
+                paymentLabel.setStyle("-fx-text-fill: #28a745; -fx-font-weight: bold; -fx-font-size: 14px;");
+                confirmButton.setDisable(false);
+            }
+        });
     }
 
     private void showAlert(String title, String content) {

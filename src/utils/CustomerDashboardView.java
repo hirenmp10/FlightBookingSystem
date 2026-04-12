@@ -10,7 +10,6 @@ public class CustomerDashboardView implements View {
     public Scene getScene() throws Exception {
         FXMLLoader loader = new FXMLLoader(MainApp.class.getResource("/views/customer_dashboard.fxml"));
         Scene scene = new Scene(loader.load());
-        scene.getStylesheets().add(MainApp.class.getResource("/styles.css").toExternalForm());
         return scene;
     }
 
