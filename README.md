@@ -115,8 +115,8 @@ build.bat
 
 | Role | Username | Password |
 |---|---|---|
-| Admin | `admin` | `admin` |
-| Manager | `manager` | `manager` |
+| Admin | `admin` | `admin123` |
+| Manager | `manager` | `manager123` |
 | Customer | Register via the app | — |
 
 ---
@@ -140,10 +140,10 @@ FlightBookingSystem/
 
 | Name | SRN | Module |
 |---|---|---|
-| _(Member 1)_ | _(SRN)_ | Admin Dashboard, Add Flight, MVC |
-| _(Member 2)_ | _(SRN)_ | Customer Dashboard, Book Flight, Seat Selection |
-| _(Member 3)_ | _(SRN)_ | Manager Dashboard, Approve Flights |
-| _(Member 4)_ | _(SRN)_ | View Tickets, Cancel Booking, Observer Pattern |
+| Hiren M P | PES2UG23CS224 | Admin Dashboard, Add Flight, MVC |
+| Gowtham B | PES2UG23CS205 | Customer Dashboard, Book Flight, Seat Selection |
+| Jayarathna R | PES2UG23CS239 | Manager Dashboard, Approve Flights |
+| Aisiri H | PES2UG24CS804 | View Tickets, Cancel Booking, Observer Pattern |
 
 ---
 
