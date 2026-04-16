@@ -16,6 +16,7 @@ import javafx.stage.Stage;
 import model.Flight;
 import utils.SceneSwitcher;
 import dao.FlightDAO;
+import utils.AlertUtils;
 import javafx.event.ActionEvent;
 
 import java.net.URL;
@@ -77,7 +78,7 @@ public class ManagerController implements Initializable {
             stage.show();
         } catch (IOException e) {
             e.printStackTrace();
-            showAlert("Error loading approved flights window.");
+            AlertUtils.showError("Search Error", "Error loading approved flights window.");
         }
     }
 
@@ -85,16 +86,16 @@ public class ManagerController implements Initializable {
     private void approveSelected() {
         Flight selected = seatsTable.getSelectionModel().getSelectedItem();
         if (selected == null) {
-            showAlert("Please select a flight to approve.");
+            AlertUtils.showError("Selection Required", "Please select a flight to approve.");
             return;
         }
 
         boolean result = FlightDAO.approveFlight(selected.getFlightNumber());
         if (result) {
-            showAlert("Flight approved successfully!");
+            AlertUtils.showInfo("Success", "Flight approved successfully!");
             loadPendingFlights();
         } else {
-            showAlert("Failed to approve the flight.");
+            AlertUtils.showError("Error", "Failed to approve the flight.");
         }
     }
 
@@ -102,16 +103,16 @@ public class ManagerController implements Initializable {
     private void disapproveSelected() {
         Flight selected = seatsTable.getSelectionModel().getSelectedItem();
         if (selected == null) {
-            showAlert("Please select a flight to disapprove.");
+            AlertUtils.showError("Selection Required", "Please select a flight to disapprove.");
             return;
         }
 
         boolean result = FlightDAO.disapproveFlight(selected.getFlightNumber());
         if (result) {
-            showAlert("Flight disapproved and removed.");
+            AlertUtils.showInfo("Success", "Flight disapproved and removed.");
             loadPendingFlights();
         } else {
-            showAlert("Failed to disapprove the flight.");
+            AlertUtils.showError("Error", "Failed to disapprove the flight.");
         }
     }
 
@@ -123,13 +124,5 @@ public class ManagerController implements Initializable {
     @FXML
     private void handleAddManager(ActionEvent event) {
         SceneSwitcher.switchTo("register.fxml", "Register New Manager", event, "manager");
-    }
-
-    private void showAlert(String msg) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Notification");
-        alert.setHeaderText(null);
-        alert.setContentText(msg);
-        alert.showAndWait();
     }
 }

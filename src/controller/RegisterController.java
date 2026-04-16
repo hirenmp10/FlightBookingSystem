@@ -15,6 +15,9 @@ public class RegisterController {
     private TextField usernameField;
 
     @FXML
+    private TextField emailField;
+
+    @FXML
     private PasswordField passwordField;
 
     private String role = "customer"; // Default role
@@ -27,16 +30,24 @@ public class RegisterController {
     private void handleRegisterRedirect(ActionEvent event) {
         String username = usernameField.getText();
         String password = passwordField.getText();
+        String email = emailField.getText();
 
-        if (username.isEmpty() || password.isEmpty()) {
-            showAlert(Alert.AlertType.WARNING, "Input Error", "Username and password cannot be empty.");
+        if (username.isEmpty() || password.isEmpty() || email.isEmpty()) {
+            showAlert(Alert.AlertType.WARNING, "Input Error", "Username, email, and password cannot be empty.");
+            return;
+        }
+
+        if (!utils.ValidationUtils.isValidEmail(email)) {
+            showAlert(Alert.AlertType.WARNING, "Validation Error", "Please enter a valid email address.");
             return;
         }
 
         User user = utils.UserFactory.createUser(username, password, role);
+        user.setEmail(email);
         boolean success = UserDAO.addUser(user);
 
         if (success) {
+            service.NotificationService.getInstance().sendRegistrationConfirmation(user);
             SceneSwitcher.switchTo("login.fxml", "Login", event);
         } else {
             showAlert(Alert.AlertType.ERROR, "Registration Failed", "User already exists or registration failed.");

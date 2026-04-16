@@ -65,13 +65,22 @@ public Booking() {
     }
 
     public String formatDob(String dob) {
+        if (dob == null || dob.isEmpty()) return dob;
+        
+        // If it's already in YYYY-MM-DD format, just return it
+        if (dob.matches("\\d{4}-\\d{2}-\\d{2}")) {
+            return dob;
+        }
+
         try {
+            // Try parsing if it's in DD-MM-YYYY format
             SimpleDateFormat inputFormat = new SimpleDateFormat("dd-MM-yyyy");
             Date parsedDate = inputFormat.parse(dob);
             SimpleDateFormat outputFormat = new SimpleDateFormat("yyyy-MM-dd");
             return outputFormat.format(parsedDate);
         } catch (Exception e) {
-            e.printStackTrace();
+            // If parsing fails, return as-is (MySQL might handle it if it's already close, 
+            // or it will throw a DB error which we handle)
             return dob;
         }
     }

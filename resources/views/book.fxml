@@ -19,10 +19,11 @@
         <!-- Content Area -->
         <ScrollPane fitToWidth="true" fitToHeight="true" style="-fx-background-color: transparent; -fx-background: transparent;">
             <content>
-                <VBox spacing="25" alignment="TOP_CENTER">
-                    <padding>
-                        <Insets top="30" right="50" bottom="30" left="50"/>
-                    </padding>
+                <VBox alignment="TOP_CENTER" style="-fx-background-color: transparent;">
+                    <VBox spacing="25" alignment="TOP_CENTER" maxWidth="1000.0">
+                        <padding>
+                            <Insets top="30" right="50" bottom="30" left="50"/>
+                        </padding>
                     
                     <!-- Flight Information Section -->
                     <VBox style="-fx-background-color: rgba(255, 255, 255, 0.85); -fx-background-radius: 15; -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.15), 10, 0, 0, 4);">
@@ -64,10 +65,13 @@
                             <TextField fx:id="nameField" promptText="Enter your full name" style="-fx-background-radius: 8;" GridPane.rowIndex="0" GridPane.columnIndex="1" />
                             
                             <Label text="Date of Birth:" style="-fx-font-size: 16px; -fx-text-fill: #2c3e50;" GridPane.rowIndex="1" GridPane.columnIndex="0" />
-                            <TextField fx:id="dobField" promptText="DD-MM-YYYY" style="-fx-background-radius: 8;" GridPane.rowIndex="1" GridPane.columnIndex="1" />
+                            <TextField fx:id="dobField" promptText="YYYY-MM-DD" style="-fx-background-radius: 8;" GridPane.rowIndex="1" GridPane.columnIndex="1" />
                             
                             <Label text="Phone:" style="-fx-font-size: 16px; -fx-text-fill: #2c3e50;" GridPane.rowIndex="2" GridPane.columnIndex="0" />
-                            <TextField fx:id="phoneField" promptText="Enter your phone number" style="-fx-background-radius: 8;" GridPane.rowIndex="2" GridPane.columnIndex="1" />
+                            <HBox spacing="10" alignment="CENTER_LEFT" GridPane.rowIndex="2" GridPane.columnIndex="1">
+                                <TextField fx:id="countryCodeField" text="+91" prefWidth="60" style="-fx-background-radius: 8;" />
+                                <TextField fx:id="phoneField" promptText="9 Digit Number" prefWidth="150" style="-fx-background-radius: 8;" />
+                            </HBox>
                             
                             <Label text="Email:" style="-fx-font-size: 16px; -fx-text-fill: #2c3e50;" GridPane.rowIndex="3" GridPane.columnIndex="0" />
                             <TextField fx:id="emailField" promptText="Enter your email address" style="-fx-background-radius: 8;" GridPane.rowIndex="3" GridPane.columnIndex="1" />
@@ -152,6 +156,7 @@
                                     style="-fx-background-color: #28a745; -fx-text-fill: white; -fx-font-size: 14px; -fx-font-weight: bold; -fx-background-radius: 8;"
                                     prefHeight="40" prefWidth="180" />
                         </HBox>
+                    </VBox>
                     </VBox>
                 </VBox>
             </content>

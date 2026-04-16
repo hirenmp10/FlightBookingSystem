@@ -2,6 +2,7 @@ package controller;
 
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import utils.AlertUtils;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import model.Booking;
@@ -25,6 +26,7 @@ public class BookingController {
     @FXML private TextField flightNumberField;
     @FXML private TextField nameField;
     @FXML private TextField dobField;
+    @FXML private TextField countryCodeField;
     @FXML private TextField phoneField;
     @FXML private TextField emailField;
     @FXML private TextField addressField;
@@ -52,6 +54,19 @@ public class BookingController {
         userIdField.setText(String.valueOf(userId));
         userIdField.setEditable(false);
 
+        // Prepopulate user details into booking form
+        model.User loggedInUser = dao.UserDAO.getUserById(userId);
+        if (loggedInUser != null) {
+            String existingEmail = loggedInUser.getEmail();
+            if (existingEmail != null && !existingEmail.isEmpty() && !"null".equalsIgnoreCase(existingEmail)) {
+                emailField.setText(existingEmail);
+            }
+            // Defaulting name text to the user's username for convenience
+            if (loggedInUser.getUsername() != null && !loggedInUser.getUsername().isEmpty()) {
+                nameField.setText(loggedInUser.getUsername());
+            }
+        }
+
         seatsDropdown.getItems().addAll("1", "2", "3", "4");
         seatsDropdown.setValue("Select");
 
@@ -72,35 +87,90 @@ public class BookingController {
     }
 
     private void updateSeatLayout() {
-        int rows = 5;  // Number of rows in the seating layout
-        int cols = (totalSeats + rows - 1) / rows;  // Calculate number of columns based on total seats
+        int colsPerRow = 6;  // 6 seats across: A, B, C [Aisle] D, E, F
+        int numRows = (totalSeats + colsPerRow - 1) / colsPerRow;
 
-        seatLayoutContainer.getChildren().clear();  // Clear the current layout
+        seatLayoutContainer.getChildren().clear();
+        seatLayoutContainer.setSpacing(20);
 
-        for (int i = 0; i < rows; i++) {
-            HBox row = new HBox(5);  // Create a horizontal box for each row
-            for (int j = i; j < totalSeats; j += rows) {
-                int seatNum = j + 1;
-                if (seatNum > totalSeats) break;  // If the seat number exceeds totalSeats, stop
+        // --- Cockpit / Front Indicator ---
+        VBox cockpit = new VBox(5);
+        cockpit.setAlignment(javafx.geometry.Pos.CENTER);
+        Label cockpitIcon = new Label("👨‍✈️");
+        cockpitIcon.setStyle("-fx-font-size: 24px;");
+        Label cockpitLabel = new Label("COCKPIT / FRONT");
+        cockpitLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #4C8BF5;");
+        cockpit.getChildren().addAll(cockpitIcon, cockpitLabel);
+        seatLayoutContainer.getChildren().add(cockpit);
 
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(8);
+        grid.setAlignment(javafx.geometry.Pos.CENTER);
+
+        // Column Labels (A B C [Aisle] D E F)
+        String[] colLabels = {"A", "B", "C", "", "D", "E", "F"};
+        for (int c = 0; c < colLabels.length; c++) {
+            if (!colLabels[c].isEmpty()) {
+                Label l = new Label(colLabels[c]);
+                l.setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #777;");
+                grid.add(l, c + 1, 0); // Start at col index 1 because index 0 is for row numbers
+                javafx.geometry.HPos hpos = javafx.geometry.HPos.CENTER;
+                GridPane.setHalignment(l, hpos);
+            }
+        }
+
+        for (int r = 0; r < numRows; r++) {
+            // Row Number Label
+            Label rowNum = new Label(String.valueOf(r + 1));
+            rowNum.setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #777; -fx-padding: 0 10 0 0;");
+            grid.add(rowNum, 0, r + 1);
+
+            for (int c = 0; c < 6; c++) {
+                int seatIdx = (r * 6) + c;
+                if (seatIdx >= totalSeats) break;
+
+                int seatNum = seatIdx + 1;
                 Button seatButton = new Button(String.valueOf(seatNum));
                 
-                // Set consistent size for both booked and available seats
-                seatButton.setPrefSize(30, 30);  // Set preferred size for both types of buttons
-                seatButton.setStyle("-fx-font-size:10px;");  // Use larger font size for better visibility
+                // --- SEAT STYLING ---
+                seatButton.setPrefSize(45, 40);
+                seatButton.setMinSize(45, 40);
                 
-                if (BookingDAO.isSeatBooked(flightNumber, seatNum)) {  // Check if the seat is booked
-                    seatButton.setStyle("-fx-background-color: red;-fx-text-fill: white; -fx-font-size: 10px;");
-                    seatButton.setDisable(true);  // Disable booked seats
+                String baseStyle = "-fx-font-size: 12px; -fx-font-weight: bold; -fx-background-radius: 6; -fx-cursor: hand;";
+                
+                if (BookingDAO.isSeatBooked(flightNumber, seatNum)) {
+                    seatButton.setStyle(baseStyle + "-fx-background-color: #e74c3c; -fx-text-fill: white;");
+                    seatButton.setDisable(true);
                 } else {
-                    seatButton.setStyle("-fx-background-color: green; -fx-font-size: 10px;");
-                    seatButton.setOnAction(e -> handleSeatSelectionAction(seatButton, seatNum));  // Action for available seats
+                    seatButton.setStyle(baseStyle + "-fx-background-color: #2ecc71; -fx-text-fill: white;");
+                    seatButton.setOnAction(e -> handleSeatSelectionAction(seatButton, seatNum));
                 }
 
-                row.getChildren().add(seatButton);  // Add the seat button to the row
+                // If column is D, E, F, we shift the index by 1 to leave room for the Aisle
+                int gridCol = (c < 3) ? (c + 1) : (c + 2);
+                grid.add(seatButton, gridCol, r + 1);
             }
-            seatLayoutContainer.getChildren().add(row);  // Add the row to the seat layout container
+
+            // Aisle Label (Empty or subtly styled)
+            if (r == 0) {
+                 Label aisleLabel = new Label("AISLE");
+                 aisleLabel.setStyle("-fx-font-size: 9px; -fx-text-fill: #aaa; -fx-rotate: 90;");
+                 grid.add(aisleLabel, 4, 1, 1, numRows);
+                 GridPane.setHalignment(aisleLabel, javafx.geometry.HPos.CENTER);
+                 GridPane.setValignment(aisleLabel, javafx.geometry.VPos.CENTER);
+            }
         }
+
+        seatLayoutContainer.getChildren().add(grid);
+
+        // --- Back of Plane Indicator ---
+        VBox tail = new VBox(5);
+        tail.setAlignment(javafx.geometry.Pos.CENTER);
+        Label tailLabel = new Label("REAR OF PLANE / GALLEY");
+        tailLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #555;");
+        tail.getChildren().add(tailLabel);
+        seatLayoutContainer.getChildren().add(tail);
     }
 
     private void updatePassengerDetailsForm() {
@@ -151,7 +221,7 @@ public class BookingController {
             javafx.scene.control.Label dobLabel = new javafx.scene.control.Label("Date of Birth (YYYY-MM-DD):");
             dobLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #444; -fx-font-weight: bold;");
             TextField passengerDob = new TextField();
-            passengerDob.setPromptText("e.g. 1995-06-15");
+            passengerDob.setPromptText("Enter DOB: YYYY-MM-DD");
             passengerDob.setStyle(
                 "-fx-background-radius: 8;" +
                 "-fx-border-color: #ccc;" +
@@ -167,19 +237,19 @@ public class BookingController {
 
 
     private void handleSeatSelectionAction(Button seatButton, int seatNum) {
-        if (seatButton.getStyle().contains("red")) {
+        if (seatButton.getStyle().contains("#e74c3c")) { // Red
             return; // Booked seat, can't select
         }
 
-        if (seatButton.getStyle().contains("green")) {
+        String baseStyle = "-fx-font-size: 12px; -fx-font-weight: bold; -fx-background-radius: 8; -fx-cursor: hand;";
+
+        if (seatButton.getStyle().contains("#2ecc71")) { // Green
             if (selectedSeats.size() < seatsToSelect) {
-                seatButton.setStyle("-fx-background-color: yellow; -fx-font-size: 10px; -fx-padding: 0;");
-                seatButton.setPrefSize(30, 30);
+                seatButton.setStyle(baseStyle + "-fx-background-color: #f1c40f; -fx-text-fill: black;"); // Yellow
                 selectedSeats.add(seatButton);
             }
-        } else if (seatButton.getStyle().contains("yellow")) {
-            seatButton.setStyle("-fx-background-color: green; -fx-font-size: 10px; -fx-padding: 0;");
-            seatButton.setPrefSize(30, 30);
+        } else if (seatButton.getStyle().contains("#f1c40f")) { // Yellow
+            seatButton.setStyle(baseStyle + "-fx-background-color: #2ecc71; -fx-text-fill: white;"); // Green
             selectedSeats.remove(seatButton);
         }
 
@@ -211,14 +281,14 @@ public class BookingController {
 @FXML
 private void confirmBooking(ActionEvent event) {
     try {
-        String name = nameField.getText();
-        String dob = dobField.getText();
-        String phone = phoneField.getText();
-        String email = emailField.getText();
-        String address = addressField.getText();
+        String name = nameField.getText().trim();
+        String dob = dobField.getText().trim();
+        String phoneStr = (countryCodeField.getText().trim() + phoneField.getText().trim()).replaceAll("\\s", "");
+        String email = emailField.getText().trim();
+        String address = addressField.getText().trim();
         int numSeats = Integer.parseInt(seatsDropdown.getValue());
 
-        if (name.isEmpty() || dob.isEmpty() || phone.isEmpty() || email.isEmpty() || address.isEmpty()) {
+        if (name.isEmpty() || dob.isEmpty() || countryCodeField.getText().isEmpty() || phoneField.getText().isEmpty() || email.isEmpty() || address.isEmpty()) {
             throw new IllegalArgumentException("All fields must be filled.");
         }
 
@@ -228,7 +298,7 @@ private void confirmBooking(ActionEvent event) {
         }
 
         // Create a booking object
-        Booking booking = new Booking(flightNumber, name, dob, phone, email, address, numSeats, userId, seatNumbers);
+        Booking booking = new Booking(flightNumber, name, dob, phoneStr, email, address, numSeats, userId, seatNumbers);
 
         // Add passengers' details
         for (int i = 0; i < numSeats - 1; i++) {
@@ -259,15 +329,15 @@ private void confirmBooking(ActionEvent event) {
             SceneSwitcher.switchTo("ticket.fxml", "Your Ticket", event);
 
         } else {
-            showAlert("Booking Failed", "There was an issue with your booking. Please try again.");
+            AlertUtils.showError("Booking Failed", "There was an issue with your booking. Please try again.");
         }
 
     } catch (NumberFormatException e) {
-        showAlert("Invalid Input", "Number of seats must be a valid number.");
+        AlertUtils.showError("Invalid Input", "Number of seats must be a valid number.");
     } catch (IllegalArgumentException e) {
-        showAlert("Invalid Input", e.getMessage());
+        AlertUtils.showError("Invalid Input", e.getMessage());
     } catch (Exception e) {
-        showAlert("Error", "Something went wrong. Please try again.");
+        AlertUtils.showError("Error", "Something went wrong. Please try again.");
         e.printStackTrace();
     }
 }
@@ -279,25 +349,37 @@ private void confirmBooking(ActionEvent event) {
         // ── Step 1: Validate primary passenger fields ──────────────────────
         String name    = nameField.getText().trim();
         String dob     = dobField.getText().trim();
-        String phone   = phoneField.getText().trim();
+        String phonePart = phoneField.getText().trim();
+        String countryPart = countryCodeField.getText().trim();
+        String fullPhone = (countryPart + phonePart).replaceAll("\\s", "");
         String email   = emailField.getText().trim();
         String address = addressField.getText().trim();
 
-        if (name.isEmpty() || dob.isEmpty() || phone.isEmpty() || email.isEmpty() || address.isEmpty()) {
-            showAlert("Missing Details", "Please fill in all Personal Information fields before proceeding to payment.");
+        if (name.isEmpty() || dob.isEmpty() || countryPart.isEmpty() || phonePart.isEmpty() || email.isEmpty() || address.isEmpty()) {
+            AlertUtils.showError("Missing Details", "Please fill in all Personal Information fields before proceeding to payment.");
+            return;
+        }
+
+        if (!utils.ValidationUtils.isValidEmail(email)) {
+            AlertUtils.showError("Validation Error", "Please enter a valid email address.");
+            return;
+        }
+
+        if (!utils.ValidationUtils.isValidPhone(fullPhone)) {
+            AlertUtils.showError("Format Error", "Please enter a valid phone number. Country code started with + and then digits.");
             return;
         }
 
         // ── Step 2: Validate seat selection ───────────────────────────────
         String seatNumbers = seatNumbersField.getText().trim();
         if (seatNumbers.isEmpty()) {
-            showAlert("No Seats Selected", "Please select your seats from the seat map before proceeding to payment.");
+            AlertUtils.showError("No Seats Selected", "Please select your seats from the seat map before proceeding to payment.");
             return;
         }
 
         // Make sure correct number of seats is selected
         if (seatsToSelect > 0 && selectedSeats.size() != seatsToSelect) {
-            showAlert("Seat Mismatch", "You selected " + seatsToSelect + " seat(s) but only picked " + selectedSeats.size() + " on the map. Please complete seat selection.");
+            AlertUtils.showError("Seat Mismatch", "You selected " + seatsToSelect + " seat(s) but only picked " + selectedSeats.size() + " on the map. Please complete seat selection.");
             return;
         }
 
@@ -309,28 +391,24 @@ private void confirmBooking(ActionEvent event) {
                 String pName = ((TextField) card.getChildren().get(3)).getText().trim();
                 String pDob  = ((TextField) card.getChildren().get(5)).getText().trim();
                 if (pName.isEmpty() || pDob.isEmpty()) {
-                    showAlert("Missing Passenger Details", "Please fill in Name and Date of Birth for Passenger " + (i + 2) + ".");
+                    AlertUtils.showError("Missing Passenger Details", "Please fill in Name and Date of Birth for Passenger " + (i + 2) + ".");
                     return;
                 }
             }
         }
 
-        // ── Step 4: Fetch flight cost from DB ─────────────────────────────
+        // ── Step 4: Fetch flight details from DAO ─────────────────────────────
         double costPerSeat = 0;
         String origin = "", destination = "", departureTime = "";
-        try (java.sql.Connection conn = db.DBConnection.getConnection()) {
-            java.sql.PreparedStatement ps = conn.prepareStatement(
-                "SELECT cost, origin, destination, departure_time FROM flights WHERE flightNumber = ?");
-            ps.setString(1, flightNumber);
-            java.sql.ResultSet rs = ps.executeQuery();
-            if (rs.next()) {
-                costPerSeat    = rs.getDouble("cost");
-                origin         = rs.getString("origin");
-                destination    = rs.getString("destination");
-                departureTime  = rs.getString("departure_time");
-            }
-        } catch (Exception e) {
-            showAlert("Error", "Could not fetch flight details: " + e.getMessage());
+        model.Flight flight = dao.FlightDAO.getFlightByNumber(flightNumber);
+        
+        if (flight != null) {
+            costPerSeat    = flight.getCost();
+            origin         = flight.getOrigin();
+            destination    = flight.getDestination();
+            departureTime  = flight.getDepartureTime().toString();
+        } else {
+            AlertUtils.showError("Error", "Could not fetch flight details.");
             return;
         }
 
@@ -381,13 +459,5 @@ private void confirmBooking(ActionEvent event) {
                 confirmButton.setDisable(false);
             }
         });
-    }
-
-    private void showAlert(String title, String content) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(content);
-        alert.showAndWait();
     }
 }

@@ -27,9 +27,22 @@ public class FlightDAO {
             stmt.executeUpdate();
             return true;
         } catch (SQLException e) {
-            e.printStackTrace();
+            System.err.println("Database error in addFlight: " + e.getMessage());
             return false;
         }
+    }
+
+    private static Flight mapResultSetToFlight(ResultSet rs) throws SQLException {
+        return new Flight(
+            rs.getString("flightNumber"),
+            rs.getString("origin"),
+            rs.getString("destination"),
+            rs.getTimestamp("departure_time").toLocalDateTime(),
+            rs.getInt("total_seats"),
+            rs.getInt("available_seats"),
+            rs.getDouble("cost"),
+            rs.getBoolean("approved")
+        );
     }
 
     // Approve a flight (set approved = true)
@@ -43,7 +56,7 @@ public class FlightDAO {
             int rowsAffected = stmt.executeUpdate();
             return rowsAffected > 0;
         } catch (SQLException e) {
-            e.printStackTrace();
+            System.err.println("Database error in addFlight: " + e.getMessage());
             return false;
         }
     }
@@ -59,7 +72,7 @@ public class FlightDAO {
             int rowsAffected = stmt.executeUpdate();
             return rowsAffected > 0;
         } catch (SQLException e) {
-            e.printStackTrace();
+            System.err.println("Database error in addFlight: " + e.getMessage());
             return false;
         }
     }
@@ -67,26 +80,17 @@ public class FlightDAO {
     // Get all approved flights
     public static List<Flight> getApprovedFlights() {
         List<Flight> flights = new ArrayList<>();
-        String sql = "SELECT * FROM flights WHERE approved = true";
+        String sql = "SELECT flightNumber, origin, destination, departure_time, total_seats, available_seats, cost, approved FROM flights WHERE approved = true";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
 
             while (rs.next()) {
-                flights.add(new Flight(
-                    rs.getString("flightNumber"),
-                    rs.getString("origin"),
-                    rs.getString("destination"),
-                    rs.getTimestamp("departure_time").toLocalDateTime(),
-                    rs.getInt("total_seats"),
-                    rs.getInt("available_seats"),
-                    rs.getDouble("cost"),
-                    rs.getBoolean("approved")
-                ));
+                flights.add(mapResultSetToFlight(rs));
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            System.err.println("Database error in getApprovedFlights: " + e.getMessage());
         }
 
         return flights;
@@ -114,7 +118,7 @@ public class FlightDAO {
                 ));
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            System.err.println("Database error in getApprovedFlights: " + e.getMessage());
         }
 
         return flights;
@@ -123,26 +127,17 @@ public class FlightDAO {
     // Get all flights
     public static List<Flight> getAllFlights() {
         List<Flight> flights = new ArrayList<>();
-        String sql = "SELECT * FROM flights";
+        String sql = "SELECT flightNumber, origin, destination, departure_time, total_seats, available_seats, cost, approved FROM flights";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
 
             while (rs.next()) {
-                flights.add(new Flight(
-                    rs.getString("flightNumber"),
-                    rs.getString("origin"),
-                    rs.getString("destination"),
-                    rs.getTimestamp("departure_time").toLocalDateTime(),
-                    rs.getInt("total_seats"),
-                    rs.getInt("available_seats"),
-                    rs.getDouble("cost"),
-                    rs.getBoolean("approved")
-                ));
+                flights.add(mapResultSetToFlight(rs));
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            System.err.println("Database error in getApprovedFlights: " + e.getMessage());
         }
 
         return flights;
@@ -159,7 +154,7 @@ public class FlightDAO {
             int rowsAffected = stmt.executeUpdate();
             return rowsAffected > 0;
         } catch (SQLException e) {
-            e.printStackTrace();
+            System.err.println("Database error in addFlight: " + e.getMessage());
             return false;
         }
     }
@@ -175,7 +170,7 @@ public class FlightDAO {
                 cities.add(rs.getString("city"));
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            System.err.println("Database error in getApprovedFlights: " + e.getMessage());
         }
         return cities;
     }
@@ -183,7 +178,7 @@ public class FlightDAO {
     // Search flights based on source, destination, and date (only approved flights)
     public static List<Flight> searchFlights(String source, String destination, LocalDateTime date) {
         List<Flight> flights = new ArrayList<>();
-        String sql = "SELECT * FROM flights WHERE origin = ? AND destination = ? AND DATE(departure_time) = ? AND approved = true";
+        String sql = "SELECT flightNumber, origin, destination, departure_time, total_seats, available_seats, cost, approved FROM flights WHERE origin = ? AND destination = ? AND DATE(departure_time) = ? AND approved = true";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -192,23 +187,52 @@ public class FlightDAO {
             stmt.setString(2, destination);
             stmt.setDate(3, Date.valueOf(date.toLocalDate()));
 
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                flights.add(new Flight(
-                    rs.getString("flightNumber"),
-                    rs.getString("origin"),
-                    rs.getString("destination"),
-                    rs.getTimestamp("departure_time").toLocalDateTime(),
-                    rs.getInt("total_seats"),
-                    rs.getInt("available_seats"),
-                    rs.getDouble("cost"),
-                    rs.getBoolean("approved")
-                ));
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    flights.add(mapResultSetToFlight(rs));
+                }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            System.err.println("Database error in getApprovedFlights: " + e.getMessage());
         }
 
         return flights;
+    }
+
+    public static Flight getFlightByNumber(String flightNumber) {
+        String sql = "SELECT flightNumber, origin, destination, departure_time, total_seats, available_seats, cost, approved FROM flights WHERE flightNumber = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, flightNumber);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapResultSetToFlight(rs);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Database error in getApprovedFlights: " + e.getMessage());
+        }
+        return null;
+    }
+
+    public static boolean updateAvailableSeats(String flightNumber, int seatsDelta) {
+        try (Connection conn = DBConnection.getConnection()) {
+            return updateAvailableSeats(conn, flightNumber, seatsDelta);
+        } catch (SQLException e) {
+            System.err.println("Database error in updateAvailableSeats: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public static boolean updateAvailableSeats(Connection conn, String flightNumber, int seatsDelta) {
+        String sql = "UPDATE flights SET available_seats = available_seats + ? WHERE flightNumber = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, seatsDelta);
+            stmt.setString(2, flightNumber);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("Database error in updateAvailableSeats with connection: " + e.getMessage());
+            return false;
+        }
     }
 }

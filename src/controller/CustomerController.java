@@ -120,221 +120,109 @@ public class CustomerController {
     }
     
     @FXML
-private void handleViewProfile(ActionEvent event) {
-    // Get current user data from database
-    int userId = BookingContext.getLoggedInUserId();
-    User user = getUserById(userId);
-    
-    if (user == null) {
-        // Handle error - user not found
-        System.err.println("Error: Could not retrieve user profile");
-        return;
-    }
-    
-    // Create a new stage for the popup
-    Stage popupStage = new Stage();
-    popupStage.initModality(Modality.APPLICATION_MODAL); // This makes it a modal dialog
-    popupStage.initOwner(((Node) event.getSource()).getScene().getWindow()); // Set owner to current window
-    popupStage.setTitle("My Profile");
-    
-    // Create the grid layout
-    GridPane grid = new GridPane();
-    grid.setAlignment(Pos.CENTER);
-    grid.setHgap(10);
-    grid.setVgap(10);
-    grid.setPadding(new Insets(25, 25, 25, 25));
-    
-    // Style constants
-    String labelStyle = "-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;";
-    String textFieldStyle = "-fx-font-size: 14px; -fx-background-radius: 6;";
-    String buttonStyle = "-fx-background-color: #4C8BF5; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 6;";
-    
-    // User ID (non-editable)
-    Label idLabel = new Label("User ID:");
-    idLabel.setStyle(labelStyle);
-    Label idValue = new Label(String.valueOf(user.getId()));
-    idValue.setStyle(textFieldStyle);
-    
-    // Username
-    Label usernameLabel = new Label("Username:");
-    usernameLabel.setStyle(labelStyle);
-    TextField usernameField = new TextField(user.getUsername());
-    usernameField.setStyle(textFieldStyle);
-    
-    // Password field with show/hide functionality
-    Label passwordLabel = new Label("Password:");
-    passwordLabel.setStyle(labelStyle);
-    
-    HBox passwordBox = new HBox(10);
-    PasswordField passwordField = new PasswordField();
-    passwordField.setText(user.getPassword());
-    passwordField.setStyle(textFieldStyle);
-    
-    TextField visiblePasswordField = new TextField(user.getPassword());
-    visiblePasswordField.setStyle(textFieldStyle);
-    visiblePasswordField.setManaged(false);
-    visiblePasswordField.setVisible(false);
-    
-    Button showPasswordButton = new Button("Show");
-    showPasswordButton.setStyle("-fx-background-color: #e0e0e0; -fx-text-fill: #333333; -fx-background-radius: 6;");
-    
-    showPasswordButton.setOnAction(e -> {
-        if (passwordField.isVisible()) {
-            showPasswordButton.setText("Hide");
-            visiblePasswordField.setText(passwordField.getText());
-            passwordField.setManaged(false);
-            passwordField.setVisible(false);
-            visiblePasswordField.setManaged(true);
-            visiblePasswordField.setVisible(true);
-        } else {
-            showPasswordButton.setText("Show");
-            passwordField.setText(visiblePasswordField.getText());
-            visiblePasswordField.setManaged(false);
-            visiblePasswordField.setVisible(false);
-            passwordField.setManaged(true);
-            passwordField.setVisible(true);
-        }
-    });
-    
-    passwordBox.getChildren().addAll(passwordField, visiblePasswordField, showPasswordButton);
-    
-    // Save and cancel buttons
-    Button saveButton = new Button("Save Changes");
-    saveButton.setStyle(buttonStyle);
-    
-    Button cancelButton = new Button("Cancel");
-    cancelButton.setStyle("-fx-background-color: #ff4c4c; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 6;");
-    
-    HBox buttonBox = new HBox(10);
-    buttonBox.setAlignment(Pos.CENTER);
-    buttonBox.getChildren().addAll(saveButton, cancelButton);
-    
-    // Add components to grid
-    grid.add(idLabel, 0, 0);
-    grid.add(idValue, 1, 0);
-    grid.add(usernameLabel, 0, 1);
-    grid.add(usernameField, 1, 1);
-    grid.add(passwordLabel, 0, 2);
-    grid.add(passwordBox, 1, 2);
-    grid.add(buttonBox, 0, 3, 2, 1);
-    
-    // Event handlers
-    saveButton.setOnAction(e -> {
-        // Update user details
-        String newUsername = usernameField.getText().trim();
-        String newPassword = passwordField.isVisible() ? 
-                             passwordField.getText() : 
-                             visiblePasswordField.getText();
+    private void handleViewProfile(ActionEvent event) {
+        // Get current user data from database
+        int userId = BookingContext.getLoggedInUserId();
+        User user = getUserById(userId);
         
-        if (newUsername.isEmpty() || newPassword.isEmpty()) {
-            // Show error message - fields cannot be empty
-            showErrorMessage(popupStage, "Username and password cannot be empty!");
+        if (user == null) {
+            System.err.println("Error: Could not retrieve user profile");
             return;
         }
         
-        // Update the user in database
-        boolean success = updateUserProfile(user.getId(), newUsername, newPassword);
+        // Create a new stage for the popup
+        Stage popupStage = new Stage();
+        popupStage.initModality(Modality.APPLICATION_MODAL);
+        popupStage.initOwner(((Node) event.getSource()).getScene().getWindow());
+        popupStage.setTitle("My Profile");
         
-        if (success) {
-            // Close the popup
-            popupStage.close();
-        } else {
-            // Show error message
-            showErrorMessage(popupStage, "Failed to update profile. Username may already be taken.");
-        }
-    });
-    
-    cancelButton.setOnAction(e -> popupStage.close());
-    
-    // Set the scene and show the stage
-    Scene scene = new Scene(grid, 400, 250);
-    popupStage.setScene(scene);
-    popupStage.setResizable(false);
-    popupStage.showAndWait(); // This will block until the dialog is closed
-}
-    
-    // Helper method to get user by ID
+        // Create the grid layout
+        GridPane grid = new GridPane();
+        grid.setAlignment(Pos.CENTER);
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(25, 25, 25, 25));
+        
+        // Style constants
+        String labelStyle = "-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #2c3e50;";
+        String textFieldStyle = "-fx-font-size: 14px; -fx-background-radius: 6;";
+        String buttonStyle = "-fx-background-color: #4C8BF5; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 6;";
+        
+        // Components
+        Label idLabel = new Label("User ID:");
+        idLabel.setStyle(labelStyle);
+        Label idValue = new Label(String.valueOf(user.getId()));
+        
+        Label usernameLabel = new Label("Username:");
+        usernameLabel.setStyle(labelStyle);
+        TextField usernameField = new TextField(user.getUsername());
+        usernameField.setStyle(textFieldStyle);
+        
+        Label passwordLabel = new Label("Password:");
+        passwordLabel.setStyle(labelStyle);
+        PasswordField passwordField = new PasswordField();
+        passwordField.setText(user.getPassword());
+        passwordField.setStyle(textFieldStyle);
+        
+        Button saveButton = new Button("Save Changes");
+        saveButton.setStyle(buttonStyle);
+        saveButton.setOnAction(e -> {
+            String newUsername = usernameField.getText().trim();
+            String newPassword = passwordField.getText();
+            if (newUsername.isEmpty() || newPassword.isEmpty()) {
+                showErrorMessage(popupStage, "Fields cannot be empty!");
+                return;
+            }
+            if (updateUserProfile(user.getId(), newUsername, newPassword)) {
+                popupStage.close();
+            } else {
+                showErrorMessage(popupStage, "Failed to update profile.");
+            }
+        });
+        
+        grid.add(idLabel, 0, 0);
+        grid.add(idValue, 1, 0);
+        grid.add(usernameLabel, 0, 1);
+        grid.add(usernameField, 1, 1);
+        grid.add(passwordLabel, 0, 2);
+        grid.add(passwordBox(passwordField), 1, 2);
+        grid.add(saveButton, 1, 3);
+        
+        Scene scene = new Scene(grid, 400, 250);
+        popupStage.setScene(scene);
+        popupStage.showAndWait();
+    }
+
+    private HBox passwordBox(PasswordField passwordField) {
+        HBox box = new HBox(10);
+        TextField visibleField = new TextField(passwordField.getText());
+        visibleField.setManaged(false);
+        visibleField.setVisible(false);
+        
+        Button toggle = new Button("Show");
+        toggle.setOnAction(e -> {
+            if (passwordField.isVisible()) {
+                visibleField.setText(passwordField.getText());
+                passwordField.setVisible(false); passwordField.setManaged(false);
+                visibleField.setVisible(true); visibleField.setManaged(true);
+                toggle.setText("Hide");
+            } else {
+                passwordField.setText(visibleField.getText());
+                visibleField.setVisible(false); visibleField.setManaged(false);
+                passwordField.setVisible(true); passwordField.setManaged(true);
+                toggle.setText("Show");
+            }
+        });
+        box.getChildren().addAll(passwordField, visibleField, toggle);
+        return box;
+    }
+
     private User getUserById(int userId) {
-        Connection conn = null;
-        PreparedStatement stmt = null;
-        ResultSet rs = null;
-        User user = null;
-        
-        try {
-            conn = DBConnection.getConnection();
-            String sql = "SELECT * FROM users WHERE id = ?";
-            stmt = conn.prepareStatement(sql);
-            stmt.setInt(1, userId);
-            rs = stmt.executeQuery();
-            
-            if (rs.next()) {
-                user = utils.UserFactory.createUser(
-                    rs.getInt("id"),
-                    rs.getString("username"),
-                    rs.getString("password"),
-                    rs.getString("role")
-                );
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        } finally {
-            if (rs != null) {
-                try { rs.close(); } catch (SQLException e) { e.printStackTrace(); }
-            }
-            if (stmt != null) {
-                try { stmt.close(); } catch (SQLException e) { e.printStackTrace(); }
-            }
-            if (conn != null) {
-                try { conn.close(); } catch (SQLException e) { e.printStackTrace(); }
-            }
-        }
-        
-        return user;
+        return UserDAO.getUserById(userId);
     }
     
-    // Helper method to update user profile
     private boolean updateUserProfile(int userId, String username, String password) {
-        Connection conn = null;
-        PreparedStatement stmt = null;
-        boolean success = false;
-        
-        try {
-            conn = DBConnection.getConnection();
-            
-            // First check if the username already exists (for another user)
-            String checkSql = "SELECT COUNT(*) FROM users WHERE username = ? AND id != ?";
-            PreparedStatement checkStmt = conn.prepareStatement(checkSql);
-            checkStmt.setString(1, username);
-            checkStmt.setInt(2, userId);
-            ResultSet rs = checkStmt.executeQuery();
-            
-            if (rs.next() && rs.getInt(1) > 0) {
-                // Username is already taken
-                return false;
-            }
-            
-            // If username is available, update the user
-            String sql = "UPDATE users SET username = ?, password = ? WHERE id = ?";
-            stmt = conn.prepareStatement(sql);
-            stmt.setString(1, username);
-            stmt.setString(2, password);
-            stmt.setInt(3, userId);
-            
-            int rowsAffected = stmt.executeUpdate();
-            success = (rowsAffected > 0);
-            
-        } catch (SQLException e) {
-            e.printStackTrace();
-        } finally {
-            if (stmt != null) {
-                try { stmt.close(); } catch (SQLException e) { e.printStackTrace(); }
-            }
-            if (conn != null) {
-                try { conn.close(); } catch (SQLException e) { e.printStackTrace(); }
-            }
-        }
-        
-        return success;
+        return UserDAO.updateUser(userId, username, password);
     }
     
     private void showErrorMessage(Stage owner, String message) {
@@ -342,22 +230,11 @@ private void handleViewProfile(ActionEvent event) {
         errorStage.initModality(Modality.APPLICATION_MODAL);
         errorStage.initOwner(owner);
         errorStage.setTitle("Error");
-        
-        VBox vbox = new VBox(20);
+        VBox vbox = new VBox(20, new Label(message), new Button("OK"));
         vbox.setAlignment(Pos.CENTER);
-        vbox.setPadding(new Insets(20, 20, 20, 20));
-        
-        Label errorLabel = new Label(message);
-        errorLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #ff4c4c;");
-        
-        Button okButton = new Button("OK");
-        okButton.setStyle("-fx-background-color: #4C8BF5; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 6;");
-        okButton.setOnAction(e -> errorStage.close());
-        
-        vbox.getChildren().addAll(errorLabel, okButton);
-        
-        Scene scene = new Scene(vbox, 300, 150);
-        errorStage.setScene(scene);
+        vbox.setPadding(new Insets(20));
+        ((Button)vbox.getChildren().get(1)).setOnAction(e -> errorStage.close());
+        errorStage.setScene(new Scene(vbox, 300, 150));
         errorStage.showAndWait();
     }
     

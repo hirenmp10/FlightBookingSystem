@@ -10,6 +10,7 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.beans.property.SimpleStringProperty;
 import model.Flight;
 import dao.FlightDAO;
+import utils.AlertUtils;
 import utils.SceneSwitcher;
 
 import java.net.URL;
@@ -88,7 +89,7 @@ public class AdminController implements Initializable {
         String costText = costField.getText().trim();
 
         if (flightNumber.isEmpty() || origin.isEmpty() || destination.isEmpty() || departure.isEmpty() || seatsText.isEmpty() || costText.isEmpty()) {
-            showAlert(Alert.AlertType.ERROR, "Validation Error", "All fields must be filled!");
+            AlertUtils.showError("Validation Error", "All fields must be filled!");
             return;
         }
 
@@ -101,16 +102,16 @@ public class AdminController implements Initializable {
             boolean success = FlightDAO.addFlight(flight);
 
             if (success) {
-                showAlert(Alert.AlertType.INFORMATION, "Flight Added", "Flight added successfully but pending approval.");
+                AlertUtils.showInfo("Flight Added", "Flight added successfully but pending approval.");
                 loadFlightsFromDB();
                 clearFields();
             } else {
-                showAlert(Alert.AlertType.ERROR, "Database Error", "Failed to add flight to the database.");
+                AlertUtils.showError("Database Error", "Failed to add flight to the database.");
             }
         } catch (DateTimeParseException e) {
-            showAlert(Alert.AlertType.ERROR, "Date Format Error", "Please use the format: yyyy-MM-dd HH:mm");
+            AlertUtils.showError("Date Format Error", "Please use the format: yyyy-MM-dd HH:mm");
         } catch (NumberFormatException e) {
-            showAlert(Alert.AlertType.ERROR, "Format Error", "Seats and Cost must be numeric.");
+            AlertUtils.showError("Format Error", "Seats and Cost must be numeric.");
         }
     }
 
@@ -121,13 +122,5 @@ public class AdminController implements Initializable {
         departureField.clear();
         seatsField.clear();
         costField.clear();
-    }
-
-    private void showAlert(Alert.AlertType type, String title, String message) {
-        Alert alert = new Alert(type);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
     }
 }

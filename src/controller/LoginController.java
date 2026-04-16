@@ -2,7 +2,7 @@ package controller;
 
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.scene.control.Alert;
+import utils.AlertUtils;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Alert.AlertType;
@@ -38,7 +38,7 @@ private void handleLogin(ActionEvent event) {
     String password = passwordField.getText();
 
     if (username.isEmpty() || password.isEmpty()) {
-        showAlert(Alert.AlertType.WARNING, "Input Required", "Please enter both username and password.");
+        AlertUtils.showError("Input Required", "Please enter both username and password.");
         return;
     }
 
@@ -59,10 +59,10 @@ private void handleLogin(ActionEvent event) {
             stage.setFullScreen(true);
             stage.show();
         } catch (Exception e) {
-            showAlert(Alert.AlertType.ERROR, "Login Failed", e.getMessage());
+            AlertUtils.showError("Login Failed", e.getMessage());
         }
     } else {
-        showAlert(Alert.AlertType.ERROR, "Login Failed", "Invalid credentials. Try again.");
+        AlertUtils.showError("Login Failed", "Invalid credentials. Try again.");
     }
 }
 
@@ -89,16 +89,8 @@ private void handleViewTickets(ActionEvent event) {
 }
     
 
-@FXML
+    @FXML
     private void handleRegisterRedirect(ActionEvent event) {
         SceneSwitcher.switchTo("register.fxml", "Register", event);
-    }
-
-    private void showAlert(AlertType type, String title, String message) {
-        Alert alert = new Alert(type);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
     }
 }

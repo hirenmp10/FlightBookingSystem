@@ -12,7 +12,7 @@ javac ^
   --add-modules javafx.controls,javafx.fxml ^
   -cp "lib\mysql-connector-j-9.2.0.jar;lib\javax.mail.jar;lib\activation.jar" ^
   -d out ^
-  src\MainApp.java src\controller\*.java src\dao\*.java src\model\*.java src\db\*.java src\utils\*.java src\observer\*.java src\service\*.java
+  src\main\MainApp.java src\controller\*.java src\dao\*.java src\model\*.java src\db\*.java src\utils\*.java src\observer\*.java src\service\*.java
 if %ERRORLEVEL% NEQ 0 (
     echo.
     echo ==============================
@@ -29,6 +29,6 @@ java ^
   --module-path "c:\Hiren_M_P_PES2UG23CS224\SEM-6\OOAD\OOAD_Project\javafx-sdk-21.0.6\lib" ^
   --add-modules javafx.controls,javafx.fxml ^
   -cp "out;lib/mysql-connector-j-9.2.0.jar;lib/javax.mail.jar;lib/activation.jar" ^
-  MainApp
+  main.MainApp
 echo.
 pause

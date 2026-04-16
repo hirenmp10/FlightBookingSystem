@@ -23,6 +23,11 @@
             <TextField fx:id="usernameField" promptText="Username" 
                        style="-fx-pref-width: 250; -fx-pref-height: 35; -fx-font-size: 14px; -fx-border-radius: 5px; -fx-border-color: #CCCCCC; -fx-padding: 5 10;" />
 
+            <!-- Email Field -->
+            <TextField fx:id="emailField" promptText="Email Address" 
+                       style="-fx-pref-width: 250; -fx-pref-height: 35; -fx-font-size: 14px; -fx-border-radius: 5px; -fx-border-color: #CCCCCC; -fx-padding: 5 10;" />
+
+
             <!-- Password Field -->
             <PasswordField fx:id="passwordField" promptText="Password" 
                           style="-fx-pref-width: 250; -fx-pref-height: 35; -fx-font-size: 14px; -fx-border-radius: 5px; -fx-border-color: #CCCCCC; -fx-padding: 5 10;" />

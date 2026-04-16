@@ -36,4 +36,14 @@ public class NotificationService extends Subject {
         // Remove observer after notification (optional)
         removeObserver(emailObserver);
     }
+    
+    /**
+     * Send registration confirmation notification
+     */
+    public void sendRegistrationConfirmation(model.User user) {
+        EmailObserver emailObserver = new EmailObserver(user.getEmail());
+        registerObserver(emailObserver);
+        notifyObservers("USER_REGISTERED", user);
+        removeObserver(emailObserver);
+    }
 }

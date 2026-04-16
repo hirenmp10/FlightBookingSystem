@@ -5,6 +5,8 @@ import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 import javafx.scene.input.MouseEvent;
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import javafx.event.ActionEvent;
 import javafx.scene.text.Text;
@@ -62,262 +64,126 @@ public class ViewTicketsController {
         selectedBookingId = -1; // Reset selection
         selectedTicketArea = null;
         
-        try (Connection con = DBConnection.getConnection()) {
-            PreparedStatement ps;
-            
-            if (isDashboardMode) {
-                // In dashboard mode, get all tickets for this user with flight information
-                ps = con.prepareStatement(
-                    "SELECT b.*, f.cost, f.departure_time, f.origin, f.destination " +
-                    "FROM bookings b " +
-                    "LEFT JOIN flights f ON b.flight_number = f.flightNumber " +
-                    "WHERE b.user_id = ?");
-                ps.setInt(1, userId);
-            } else {
-                // In regular mode, get specific ticket by booking ID with flight information
-                if (bookingIdField.getText().isEmpty()) {
-                    ticketText.setText("Please enter a booking ID.");
-                    return;
-                }
-                
-                try {
-                    Integer.parseInt(bookingIdField.getText());
-                } catch (NumberFormatException e) {
-                    ticketText.setText("Please enter a valid booking ID (numbers only).");
-                    return;
-                }
-                
-                ps = con.prepareStatement(
-                    "SELECT b.*, f.cost, f.departure_time, f.origin, f.destination " +
-                    "FROM bookings b " +
-                    "LEFT JOIN flights f ON b.flight_number = f.flightNumber " +
-                    "WHERE b.id = ?");
-                ps.setInt(1, Integer.parseInt(bookingIdField.getText()));
+        List<model.Booking> bookings;
+        if (isDashboardMode) {
+            bookings = dao.BookingDAO.getBookingsByUserId(userId);
+        } else {
+            String idText = bookingIdField.getText().trim();
+            if (idText.isEmpty()) {
+                ticketText.setText("Please enter a booking ID.");
+                return;
             }
-            
-            ResultSet rs = ps.executeQuery();
-            boolean found = false;
-            
-            while (rs.next()) {
-                found = true;
-                final int bookingId = rs.getInt("id");
-                TextArea ta = new TextArea(formatTicket(rs));
-                ta.setEditable(false);
-                ta.setPrefHeight(200);
-                ta.setWrapText(true);
-                
-                // Add click event to select tickets in dashboard mode
-                if (isDashboardMode) {
-                    ta.setStyle("-fx-border-color: transparent;");
-                    
-                    // Add click listener to select ticket
-                    ta.setOnMouseClicked(event -> {
-                        // Deselect previous ticket
-                        if (selectedTicketArea != null) {
-                            selectedTicketArea.setStyle("-fx-border-color: transparent;");
-                        }
-                        
-                        // Select this ticket
-                        selectedBookingId = bookingId;
-                        selectedTicketArea = ta;
-                        ta.setStyle("-fx-border-color: #1976D2; -fx-border-width: 2px;");
-                        ticketText.setText("Selected Booking ID: " + bookingId);
-                    });
-                }
-                
-                ticketDisplayBox.getChildren().add(ta);
+            try {
+                int bid = Integer.parseInt(idText);
+                model.Booking b = dao.BookingDAO.getBookingById(bid);
+                bookings = new ArrayList<>();
+                if (b != null) bookings.add(b);
+            } catch (NumberFormatException e) {
+                ticketText.setText("Please enter a valid booking ID.");
+                return;
             }
-            
-            if (!found) {
-                ticketText.setText(isDashboardMode ? 
-                    "You have no bookings." : 
-                    "No booking found with ID: " + bookingIdField.getText());
-            } else if (!isDashboardMode) {
-                ticketText.setText(""); // Clear status area when tickets are shown
-            }
-        } catch (Exception e) {
-            ticketText.setText("Error: " + e.getMessage());
         }
+
+        if (bookings.isEmpty()) {
+            ticketText.setText(isDashboardMode ? "You have no bookings." : "No booking found with ID: " + bookingIdField.getText());
+            return;
+        }
+
+        for (model.Booking b : bookings) {
+            final int bid = b.getBookingId();
+            model.Flight f = dao.FlightDAO.getFlightByNumber(b.getFlightNumber());
+            TextArea ta = new TextArea(formatTicket(b, f));
+            ta.setEditable(false);
+            ta.setPrefHeight(200);
+            ta.setWrapText(true);
+
+            if (isDashboardMode) {
+                ta.setStyle("-fx-border-color: transparent;");
+                ta.setOnMouseClicked(event -> {
+                    if (selectedTicketArea != null) {
+                        selectedTicketArea.setStyle("-fx-border-color: transparent;");
+                    }
+                    selectedBookingId = bid;
+                    selectedTicketArea = ta;
+                    ta.setStyle("-fx-border-color: #1976D2; -fx-border-width: 2px;");
+                    ticketText.setText("Selected Booking ID: " + bid);
+                });
+            }
+            ticketDisplayBox.getChildren().add(ta);
+        }
+        if (!isDashboardMode) ticketText.setText("");
     }
     
     @FXML
     public void cancelBooking() {
         int bookingId;
-        
         try {
             if (isDashboardMode) {
                 if (selectedBookingId != -1) {
-                    // Use the selected booking ID
                     bookingId = selectedBookingId;
                 } else {
-                    // No ticket selected, prompt for booking ID
                     TextInputDialog dialog = new TextInputDialog();
                     dialog.setTitle("Cancel Booking");
                     dialog.setHeaderText("Enter Booking ID to cancel");
                     dialog.setContentText("Booking ID:");
-                    
                     Optional<String> result = dialog.showAndWait();
-                    if (result.isEmpty()) {
-                        return; // User cancelled
-                    }
-                    
+                    if (result.isEmpty()) return;
                     bookingId = Integer.parseInt(result.get());
                 }
-                
-                // Verify this booking belongs to the current user
-                try (Connection con = DBConnection.getConnection()) {
-                    PreparedStatement checkUserPs = con.prepareStatement(
-                        "SELECT user_id FROM bookings WHERE id = ?");
-                    checkUserPs.setInt(1, bookingId);
-                    ResultSet rs = checkUserPs.executeQuery();
-                    
-                    if (rs.next()) {
-                        int actualUserId = rs.getInt("user_id");
-                        if (userId != actualUserId) {
-                            ticketText.setText("This booking doesn't belong to your account.");
-                            return;
-                        }
-                    } else {
-                        ticketText.setText("Booking ID not found.");
-                        return;
-                    }
-                } catch (SQLException e) {
-                    ticketText.setText("Error verifying user: " + e.getMessage());
-                    return;
-                }
             } else {
-                // In regular mode, use the ID from the text field
                 if (bookingIdField.getText().isEmpty()) {
                     ticketText.setText("Please enter a booking ID first.");
                     return;
                 }
                 bookingId = Integer.parseInt(bookingIdField.getText());
-                
-                // Prompt for user ID for verification
+            }
+
+            model.Booking booking = dao.BookingDAO.getBookingById(bookingId);
+            if (booking == null) {
+                ticketText.setText("Booking ID not found.");
+                return;
+            }
+
+            if (isDashboardMode && booking.getUserId() != userId) {
+                ticketText.setText("This booking doesn't belong to your account.");
+                return;
+            }
+
+            if (!isDashboardMode) {
                 TextInputDialog userIdDialog = new TextInputDialog();
                 userIdDialog.setTitle("User Verification");
                 userIdDialog.setHeaderText("Security Verification");
                 userIdDialog.setContentText("Please enter your User ID:");
-                
                 Optional<String> userIdResult = userIdDialog.showAndWait();
-                if (userIdResult.isEmpty()) {
-                    return; // User cancelled
-                }
-                
-                int enteredUserId;
-                try {
-                    enteredUserId = Integer.parseInt(userIdResult.get());
-                } catch (NumberFormatException e) {
-                    ticketText.setText("Invalid User ID. Please enter a valid number.");
-                    return;
-                }
-                
-                // Check if the user ID matches the booking
-                try (Connection con = DBConnection.getConnection()) {
-                    PreparedStatement checkUserPs = con.prepareStatement(
-                        "SELECT user_id FROM bookings WHERE id = ?");
-                    checkUserPs.setInt(1, bookingId);
-                    ResultSet rs = checkUserPs.executeQuery();
-                    
-                    if (rs.next()) {
-                        int actualUserId = rs.getInt("user_id");
-                        if (enteredUserId != actualUserId) {
-                            ticketText.setText("User ID and Booking ID don't match. Cannot cancel the ticket.");
-                            return;
-                        }
-                    } else {
-                        ticketText.setText("Booking ID not found.");
-                        return;
-                    }
-                } catch (SQLException e) {
-                    ticketText.setText("Error verifying user: " + e.getMessage());
+                if (userIdResult.isEmpty()) return;
+                if (Integer.parseInt(userIdResult.get()) != booking.getUserId()) {
+                    ticketText.setText("User ID and Booking ID don't match.");
                     return;
                 }
             }
-        } catch (NumberFormatException e) {
-            ticketText.setText("Invalid booking ID. Please enter numbers only.");
-            return;
-        }
-        
-        // Verify the booking exists and get flight information
-        try (Connection con = DBConnection.getConnection()) {
-            PreparedStatement checkPs = con.prepareStatement(
-                "SELECT b.id, f.flightNumber FROM bookings b " +
-                "JOIN flights f ON b.flight_number = f.flightNumber " +
-                "WHERE b.id = ?");
-            checkPs.setInt(1, bookingId);
-            
-            ResultSet rs = checkPs.executeQuery();
-            
-            if (!rs.next()) {
-                ticketText.setText("Booking ID not found.");
-                return;
-            }
-            
-            String flightNumber = rs.getString("flightNumber");
-            
-            // Show confirmation dialog
-            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION, 
-                "Are you sure you want to cancel booking ID " + bookingId + "?", 
-                ButtonType.YES, ButtonType.NO);
+
+            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION, "Are you sure you want to cancel booking ID " + bookingId + "?", ButtonType.YES, ButtonType.NO);
             confirm.setHeaderText("Cancel Booking Confirmation");
-            
             confirm.showAndWait().ifPresent(btn -> {
                 if (btn == ButtonType.YES) {
-                    try (Connection conn = DBConnection.getConnection()) {
-                        // First update available seats in flights table
-                        // Count seats by counting commas + 1
-                        PreparedStatement seatCountPs = conn.prepareStatement(
-                            "SELECT seat_number FROM bookings WHERE id = ?");
-                        seatCountPs.setInt(1, bookingId);
-                        ResultSet seatRs = seatCountPs.executeQuery();
-                        
-                        if (seatRs.next()) {
-                            String seatNumbers = seatRs.getString("seat_number");
-                            int seatCount = 0;
-                            if (seatNumbers != null && !seatNumbers.isEmpty()) {
-                                seatCount = seatNumbers.split(",").length;
-                            }
-                            
-                            // Update available seats
-                            PreparedStatement updateSeatsPs = conn.prepareStatement(
-                                "UPDATE flights SET available_seats = available_seats + ? " +
-                                "WHERE flightNumber = ?");
-                            updateSeatsPs.setInt(1, seatCount);
-                            updateSeatsPs.setString(2, flightNumber);
-                            updateSeatsPs.executeUpdate();
-                        }
-                        
-                        // Delete the booking
-                        PreparedStatement deletePs = conn.prepareStatement(
-                            "DELETE FROM bookings WHERE id = ?");
-                        deletePs.setInt(1, bookingId);
-                        int result = deletePs.executeUpdate();
-                        
-                        ticketText.setText(result > 0 ? 
-                            "Booking #" + bookingId + " has been cancelled successfully." : 
-                            "Failed to cancel booking. Please try again.");
-                        
-                        // Reset selected ticket
+                    int seatsToReturn = booking.getSeatNumbers() != null ? booking.getSeatNumbers().split(",").length : booking.getNumSeats();
+                    if (dao.BookingDAO.cancelBooking(bookingId, booking.getFlightNumber(), seatsToReturn)) {
+                        ticketText.setText("Booking #" + bookingId + " has been cancelled successfully.");
                         selectedBookingId = -1;
                         selectedTicketArea = null;
-                        
-                        // Refresh tickets display
                         loadTickets();
-                    } catch (Exception e) {
-                        ticketText.setText("Error: " + e.getMessage());
+                    } else {
+                        ticketText.setText("Failed to cancel booking.");
                     }
                 }
             });
-            
-        } catch (Exception e) {
-            ticketText.setText("Error: " + e.getMessage());
+        } catch (NumberFormatException e) {
+            ticketText.setText("Invalid input.");
         }
     }
     
     @FXML
     private void goBack(ActionEvent event) {
-        // Go back to appropriate screen based on mode
         if (isDashboardMode) {
             SceneSwitcher.switchTo("customer_dashboard.fxml", "Customer Dashboard", event);
         } else {
@@ -330,29 +196,22 @@ public class ViewTicketsController {
         SceneSwitcher.switchTo("customer_dashboard.fxml", "Customer Dashboard", event);
     }
     
-    private String formatTicket(ResultSet rs) throws SQLException {
-        // Calculate the total cost based on number of seats
-        String seats = rs.getString("seat_number");
-        int seatCount = 1; // Default to 1 seat
-        if (seats != null && !seats.isEmpty()) {
-            seatCount = seats.split(",").length;
-        }
-        double baseCost = rs.getDouble("cost");
-        double totalCost = baseCost * seatCount;
+    private String formatTicket(model.Booking b, model.Flight f) {
+        double costPerSeat = f != null ? f.getCost() : 0;
+        int seatCount = b.getSeatNumbers() != null ? b.getSeatNumbers().split(",").length : b.getNumSeats();
+        double totalCost = costPerSeat * seatCount;
         
         StringBuilder ticket = new StringBuilder();
         ticket.append("====== FLIGHT TICKET ======\n\n")
-              .append("Booking ID: ").append(rs.getInt("id")).append("\n")
-              .append("Flight: ").append(rs.getString("flight_number")).append("\n")
-              .append("Route: ").append(rs.getString("origin")).append(" → ").append(rs.getString("destination")).append("\n")
-              .append("Name: ").append(rs.getString("user_name")).append("\n")
-              .append("Email: ").append(rs.getString("email")).append("\n")
-              .append("Seats: ").append(seats != null && !seats.isEmpty() ? seats : "None").append("\n");
-        
-        String extraPassengers = rs.getString("extra_passengers");
-        ticket.append("Passengers: ").append(extraPassengers != null && !extraPassengers.isEmpty() ? extraPassengers : "None").append("\n")
-              .append("Departure: ").append(rs.getTimestamp("departure_time")).append("\n")
-              .append("Base Cost: ₹").append(String.format("%.2f", baseCost)).append("\n")
+              .append("Booking ID: ").append(b.getBookingId()).append("\n")
+              .append("Flight: ").append(b.getFlightNumber()).append("\n")
+              .append("Route: ").append(f != null ? f.getOrigin() + " → " + f.getDestination() : "Unknown").append("\n")
+              .append("Name: ").append(b.getUserName()).append("\n")
+              .append("Email: ").append(b.getEmail()).append("\n")
+              .append("Seats: ").append(b.getSeatNumbers() != null ? b.getSeatNumbers() : "None").append("\n")
+              .append("Passengers: ").append(b.getExtraPassengers() != null ? b.getExtraPassengers() : "None").append("\n")
+              .append("Departure: ").append(f != null ? f.getDepartureTime() : "Unknown").append("\n")
+              .append("Base Cost: ₹").append(String.format("%.2f", costPerSeat)).append("\n")
               .append("Number of Seats: ").append(seatCount).append("\n")
               .append("Total Cost: ₹").append(String.format("%.2f", totalCost)).append("\n")
               .append("\n==========================");

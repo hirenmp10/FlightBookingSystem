@@ -3,6 +3,9 @@ package observer;
 import model.Booking;
 import model.Flight;
 import db.DBConnection;
+import dao.FlightDAO;
+import dao.BookingDAO;
+import utils.Config;
 
 import javax.mail.*;
 import javax.mail.internet.*;
@@ -12,9 +15,12 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.format.DateTimeFormatter;
 import java.util.Properties;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class EmailObserver implements Observer {
     private String recipientEmail;
+    private static final ExecutorService executorTask = Executors.newCachedThreadPool();
     
     public EmailObserver(String email) {
         this.recipientEmail = email;
@@ -22,46 +28,40 @@ public class EmailObserver implements Observer {
     
     @Override
     public void update(String eventType, Object data) {
-        if (data instanceof Booking && "BOOKING_CONFIRMED".equals(eventType)) {
-            Booking booking = (Booking) data;
-            
-            // If booking ID is 0, try to retrieve it from database
-            if (booking.getBookingId() == 0) {
-                int retrievedId = retrieveBookingId(booking);
-                if (retrievedId > 0) {
-                    booking.setBookingId(retrievedId);
-                    System.out.println("DEBUG - Retrieved ID for email: " + retrievedId);
+        executorTask.submit(() -> {
+            if (data instanceof Booking && "BOOKING_CONFIRMED".equals(eventType)) {
+                Booking booking = (Booking) data;
+                
+                // If booking ID is 0, try to retrieve it from database
+                if (booking.getBookingId() == 0) {
+                    int retrievedId = retrieveBookingId(booking);
+                    if (retrievedId > 0) {
+                        booking.setBookingId(retrievedId);
+                    }
                 }
+                
+                // Get flight details using DAO
+                Flight flightDetails = FlightDAO.getFlightByNumber(booking.getFlightNumber());
+                
+                // Send email with complete information
+                sendBookingConfirmation(booking, flightDetails);
+            } else if (data instanceof model.User && "USER_REGISTERED".equals(eventType)) {
+                model.User user = (model.User) data;
+                sendRegistrationEmail(user);
             }
-            
-            // Get flight details
-            Flight flightDetails = getFlightDetails(booking.getFlightNumber());
-            
-            // Send email with complete information
-            sendBookingConfirmation(booking, flightDetails);
-        }
+        });
     }
     
     private int retrieveBookingId(Booking booking) {
-        Connection connection = null;
-        PreparedStatement statement = null;
-        ResultSet resultSet = null;
-        int bookingId = 0;
-        
-        try {
-            connection = DBConnection.getConnection();
-            // Get the booking ID using other booking details
-            String query = "SELECT id FROM bookings WHERE user_id = ? AND flight_number = ? AND user_name = ?";
+        String query = "SELECT id FROM bookings WHERE user_id = ? AND flight_number = ? AND user_name = ?";
+        if (booking.getSeatNumbers() != null && !booking.getSeatNumbers().isEmpty()) {
+            query += " AND seat_number = ?";
+        }
+        query += " ORDER BY booking_date DESC LIMIT 1";
+
+        try (Connection connection = DBConnection.getConnection();
+             PreparedStatement statement = connection.prepareStatement(query)) {
             
-            // If we have seat information, use it for more precise matching
-            if (booking.getSeatNumbers() != null && !booking.getSeatNumbers().isEmpty()) {
-                query += " AND seat_number = ?";
-            }
-            
-            // Get the most recent booking if multiple matches exist
-            query += " ORDER BY booking_date DESC LIMIT 1";
-            
-            statement = connection.prepareStatement(query);
             statement.setInt(1, booking.getUserId());
             statement.setString(2, booking.getFlightNumber());
             statement.setString(3, booking.getUserName());
@@ -70,152 +70,46 @@ public class EmailObserver implements Observer {
                 statement.setString(4, booking.getSeatNumbers());
             }
             
-            System.out.println("DEBUG - Email Observer executing query: " + query);
-            resultSet = statement.executeQuery();
-            
-            if (resultSet.next()) {
-                bookingId = resultSet.getInt("id");
-                System.out.println("DEBUG - Email Observer found booking ID: " + bookingId);
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getInt("id");
+                }
             }
         } catch (SQLException e) {
             System.err.println("Database error in EmailObserver: " + e.getMessage());
-            e.printStackTrace();
-        } finally {
-            try {
-                if (resultSet != null) resultSet.close();
-                if (statement != null) statement.close();
-            } catch (SQLException e) {
-                System.err.println("Error closing resources: " + e.getMessage());
-            }
         }
-        
-        return bookingId;
-    }
-    
-    private Flight getFlightDetails(String flightNumber) {
-        Flight flight = null;
-        Connection connection = null;
-        PreparedStatement statement = null;
-        ResultSet resultSet = null;
-        
-        try {
-            connection = DBConnection.getConnection();
-            String query = "SELECT flightNumber, origin, destination, departure_time, total_seats, available_seats, cost, approved " +
-                           "FROM flights WHERE flightNumber = ?";
-            statement = connection.prepareStatement(query);
-            statement.setString(1, flightNumber);
-            
-            resultSet = statement.executeQuery();
-            
-            if (resultSet.next()) {
-                flight = new Flight(
-                    resultSet.getString("flightNumber"),
-                    resultSet.getString("origin"),
-                    resultSet.getString("destination"),
-                    resultSet.getTimestamp("departure_time").toLocalDateTime(),
-                    resultSet.getInt("total_seats"),
-                    resultSet.getInt("available_seats"),
-                    resultSet.getDouble("cost"),
-                    resultSet.getBoolean("approved")
-                );
-            }
-        } catch (SQLException e) {
-            System.err.println("Error retrieving flight details: " + e.getMessage());
-            e.printStackTrace();
-        } finally {
-            try {
-                if (resultSet != null) resultSet.close();
-                if (statement != null) statement.close();
-            } catch (SQLException e) {
-                System.err.println("Error closing resources: " + e.getMessage());
-            }
-        }
-        
-        return flight;
+        return 0;
     }
     
     private String extractPassengerName(String passengerData) {
         if (passengerData == null || passengerData.isEmpty()) {
             return "";
         }
-        
-        // Find the opening parenthesis for the date of birth
         int parenthesisIndex = passengerData.indexOf('(');
-        if (parenthesisIndex > 0) {
-            // Return everything before the opening parenthesis, trimmed
-            return passengerData.substring(0, parenthesisIndex).trim();
-        } else {
-            // If no parenthesis found, return the whole string trimmed
-            return passengerData.trim();
-        }
+        return parenthesisIndex > 0 ? passengerData.substring(0, parenthesisIndex).trim() : passengerData.trim();
     }
     
     private String getExtraPassengers(Booking booking) {
         String extraPassengers = booking.getExtraPassengers();
-        
-        // If not available in the booking object, fetch from database
         if (extraPassengers == null || extraPassengers.isEmpty()) {
-            try {
-                Connection connection = DBConnection.getConnection();
-                PreparedStatement statement = connection.prepareStatement(
-                    "SELECT extra_passengers FROM bookings WHERE id = ?"
-                );
-                statement.setInt(1, booking.getBookingId());
-                ResultSet resultSet = statement.executeQuery();
-                
-                if (resultSet.next()) {
-                    extraPassengers = resultSet.getString("extra_passengers");
-                    booking.setExtraPassengers(extraPassengers);
-                }
-                
-                resultSet.close();
-                statement.close();
-            } catch (SQLException e) {
-                System.err.println("Error retrieving extra passengers: " + e.getMessage());
+            Booking dbBooking = BookingDAO.getBookingById(booking.getBookingId());
+            if (dbBooking != null) {
+                extraPassengers = dbBooking.getExtraPassengers();
+                booking.setExtraPassengers(extraPassengers);
             }
         }
-        
         return extraPassengers;
     }
     
     private int getBookedSeatsCount(Booking booking) {
-        int count = 0;
-        
-        // Count seats from the seat numbers string if available
         if (booking.getSeatNumbers() != null && !booking.getSeatNumbers().isEmpty()) {
-            // If seats are stored as comma-separated values
-            String[] seats = booking.getSeatNumbers().split(",");
-            count = seats.length;
-        } else {
-            // Try to get the count from the num_seats field in the database
-            try {
-                Connection connection = DBConnection.getConnection();
-                PreparedStatement statement = connection.prepareStatement(
-                    "SELECT num_seats FROM bookings WHERE id = ?"
-                );
-                statement.setInt(1, booking.getBookingId());
-                ResultSet resultSet = statement.executeQuery();
-                
-                if (resultSet.next()) {
-                    count = resultSet.getInt("num_seats");
-                }
-                
-                resultSet.close();
-                statement.close();
-            } catch (SQLException e) {
-                System.err.println("Error retrieving seat count: " + e.getMessage());
-                // Default to 1 if we can't determine the count
-                count = 1;
-            }
+            return booking.getSeatNumbers().split(",").length;
         }
-        
-        // Make sure we return at least 1
-        return Math.max(1, count);
+        return Math.max(1, booking.getNumSeats());
     }
     
     private void sendBookingConfirmation(Booking booking, Flight flight) {
         if (flight == null) {
-            // If flight details couldn't be fetched, send a simplified confirmation
             sendSimpleBookingConfirmation(booking);
             return;
         }
@@ -249,17 +143,10 @@ public class EmailObserver implements Observer {
         message.append("User ID: ").append(booking.getUserId()).append("\n");
         message.append("Passenger 1: ").append(booking.getUserName()).append("\n");
         
-        // Add additional passengers
         if (extraPassengers != null && !extraPassengers.isEmpty()) {
-            if (extraPassengers.contains(",")) {
-                String[] additionalPassengers = extraPassengers.split(",");
-                for (int i = 0; i < additionalPassengers.length; i++) {
-                    String passengerName = extractPassengerName(additionalPassengers[i]);
-                    message.append("Passenger ").append(i + 2).append(": ").append(passengerName).append("\n");
-                }
-            } else {
-                String passengerName = extractPassengerName(extraPassengers);
-                message.append("Passenger 2: ").append(passengerName).append("\n");
+            String[] additionalPassengers = extraPassengers.split(",");
+            for (int i = 0; i < additionalPassengers.length; i++) {
+                message.append("Passenger ").append(i + 2).append(": ").append(extractPassengerName(additionalPassengers[i])).append("\n");
             }
         }
         message.append("\n");
@@ -290,44 +177,48 @@ public class EmailObserver implements Observer {
         sendEmail(subject, message);
     }
     
-    private void sendEmail(String subject, String messageBody) {
-        // Email server configuration
-        String host = "smtp.gmail.com";
-        String port = "587";
-        String username = "moulikmachaiah0724@gmail.com"; // Replace with actual email
-        String password = "lzxl fofd ipiu zpqh"; // Replace with actual app password
+    private void sendRegistrationEmail(model.User user) {
+        String subject = "Welcome to Aryavarta Airlines - Registration Successful";
+        String message = "Dear " + user.getUsername() + ",\n\n" +
+                "Thank you for registering with Aryavarta Airlines!\n" +
+                "Your account has been successfully created with the role: " + user.getRole() + ".\n\n" +
+                "You can now log in to your account and start booking flights with us.\n\n" +
+                "Safe travels,\n" +
+                "The Aryavarta Airlines Team";
         
-        // Set properties
+        sendEmail(subject, message);
+    }
+    
+    private void sendEmail(String subject, String messageBody) {
         Properties props = new Properties();
+        props.put("mail.smtp.host", Config.SMTP_HOST);
+        props.put("mail.smtp.port", Config.SMTP_PORT);
         props.put("mail.smtp.auth", "true");
-        props.put("mail.smtp.starttls.enable", "true");
-        props.put("mail.smtp.host", host);
-        props.put("mail.smtp.port", port);
+        props.put("mail.smtp.ssl.enable", "true");
+        props.put("mail.smtp.ssl.protocols", "TLSv1.2");
+        props.put("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory");
+        props.put("mail.smtp.socketFactory.port", Config.SMTP_PORT);
+        props.put("mail.smtp.timeout", "5000");
+        props.put("mail.smtp.connectiontimeout", "5000");
         
         try {
-            // Create session with authentication
             Session session = Session.getInstance(props, new Authenticator() {
                 @Override
                 protected PasswordAuthentication getPasswordAuthentication() {
-                    return new PasswordAuthentication(username, password);
+                    return new PasswordAuthentication(Config.SMTP_USER, Config.SMTP_PASS);
                 }
             });
             
-            // Create message
             Message message = new MimeMessage(session);
-            message.setFrom(new InternetAddress(username));
+            message.setFrom(new InternetAddress(Config.SMTP_USER));
             message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(recipientEmail));
             message.setSubject(subject);
             message.setText(messageBody);
             
-            // Send message
             Transport.send(message);
-            
             System.out.println("Email sent successfully to " + recipientEmail);
-            
         } catch (MessagingException e) {
             System.err.println("Failed to send email notification: " + e.getMessage());
-            e.printStackTrace();
         }
     }
 }
